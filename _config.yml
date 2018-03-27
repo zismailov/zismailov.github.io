@@ -22,8 +22,6 @@ social:
       link: "https://twitter.com/pekrfh"
     - icon: fa-linkedin
       link: "#"
-    - icon: fa-stack-exchange
-      link: "#"
     - icon: fa-github
       link: "https://github.com/zismailov"
 
@@ -34,8 +32,8 @@ share:
 urls:
     - text: About Me
       url: /about/
-    - text: My Projects
-      url: /projects/
+    #- text: My Projects
+      #url: /projects/
     - text: XML Feed
       url: /feed.xml
 
