@@ -75,7 +75,7 @@ class Post
   end
 
   def config
-    { disqus: 'patshaughnessy' }
+    { disqus: 'zulkarbek' }
   end
 
   def render_to(path)

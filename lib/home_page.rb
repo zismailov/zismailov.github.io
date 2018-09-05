@@ -15,7 +15,7 @@ class HomePage
   end
 
   def title
-    'Pat Shaughnessy'
+    'Zulkar Bedelbaev'
   end
 
   def month_strings

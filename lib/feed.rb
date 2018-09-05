@@ -23,8 +23,8 @@ class Feed
 
   def feed
     xml.feed 'xmlns' => 'http://www.w3.org/2005/Atom' do
-      xml.title 'Pat Shaughnessy'
-      xml.id 'http://patshaughnessy.net'
+      xml.title 'Zulkar Bedelbaev'
+      xml.id 'http://bedelbaev.com'
       xml.updated '2008-09-03T00:00:00Z'
       xml.author { xml.name '' }
       posts.each do |post|
@@ -52,7 +52,7 @@ class Feed
   end
 
   def absolute(url)
-    "http://patshaughnessy.net#{url}"
+    "http://bedelbaev.com#{url}"
   end
 
   def time_from(date)
