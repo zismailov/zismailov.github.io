@@ -18,13 +18,22 @@ class Post
   end
 
   def body_html_with_code_snippets(html)
-    html.gsub(/<pre type="(.*?)">(.*?)<\/pre>/m) do
-      CodeRay.scan($2, code_type($1)).html(:wrap => :div, :bold_every => false, :line_numbers => false, :css => :class)
+    html.gsub(/<pre type="(.*?)"(?: style="(.*?)")?>(.*?)<\/pre>/m) do
+      highlighted = CodeRay.scan($3, code_type($1)).html(:wrap => :div, :bold_every => false, :line_numbers => false, :css => :class)
+      if $2
+        highlighted.gsub(/<div class="CodeRay">/m, "<div class=\"CodeRay\" style=\"#{$2}\">")
+      else
+        highlighted
+      end
     end
   end
 
   def body_html_delim_removed(html)
     html.sub('DELIM', '')
+  end
+
+  def summary
+    body_html[0..400]
   end
 
   def headers

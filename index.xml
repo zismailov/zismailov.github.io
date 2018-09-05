@@ -1,0 +1,3845 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Pat Shaughnessy</title>
+  <id>http://patshaughnessy.net</id>
+  <updated>2008-09-03T00:00:00Z</updated>
+  <author>
+    <name></name>
+  </author>
+  <entry>
+    <title>From ActiveRecord to Diesel</title>
+    <link href="http://patshaughnessy.net/2018/6/9/from-activerecord-to-diesel" rel="alternate"/>
+    <id>http://patshaughnessy.net/2018/6/9/from-activerecord-to-diesel</id>
+    <published>2018-06-09T03:00:00Z</published>
+    <updated>2018-06-09T03:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2018/6/9/exercise.jpg"&gt;&lt;br/&gt;
+&lt;i&gt; Learning something new every day
+is exercise for your mind.&lt;/i&gt;&lt;br/&gt;
+    &lt;small&gt;(source: &lt;a href="https://commons.wikimedia.org/wiki/File:Defender_builds_routine_to_achieve_goals_140716-F-FW757-073.jpg"&gt;Jeremy Bowcock via Wikimedia</summary>
+    <content type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2018/6/9/exercise.jpg"&gt;&lt;br/&gt;
+&lt;i&gt; Learning something new every day
+is exercise for your mind.&lt;/i&gt;&lt;br/&gt;
+    &lt;small&gt;(source: &lt;a href="https://commons.wikimedia.org/wiki/File:Defender_builds_routine_to_achieve_goals_140716-F-FW757-073.jpg"&gt;Jeremy Bowcock via Wikimedia Commons&lt;/a&gt;)&lt;/small&gt;&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;As software developers we’re paid to be professional learners. People hire us
+(or should hire us) for what we are capable of learning, not for what we
+already know. To stay in shape and keep up with our peers we need to practice
+by learning something new every day. We need to get daily exercise for our
+minds.&lt;/p&gt;
+
+&lt;p&gt;For me the best way to do this is to make simple tasks harder. Many times each
+day I need to copy files, parse XML, generate JSON, or send an HTTP request.
+The boring daily chores of a modern knowledge worker. To make my life more
+interesting and to exercise my mind, I sometimes choose new tools or
+programming languages that are harder to use, not easier, to accomplish these
+small tasks.&lt;/p&gt;
+
+&lt;p&gt;Let’s take an example. Recently I needed to run a simple SQL query on a
+Postgres database and produce a one-off report. I could have done this in 5
+minutes using Ruby and ActiveRecord. Instead, I decided to use
+&lt;a href="https://www.rust-lang.org"&gt;Rust&lt;/a&gt; and &lt;a href="http://diesel.rs"&gt;Diesel&lt;/a&gt; &amp;ndash; a language
+and a tool I hadn’t used before. Instead of 5 minutes it took several hours,
+but I learned something new. I&amp;rsquo;ve written up the steps I took here today. Get
+your mind’s exercise for today and read on to learn how to execute a SQL
+statement using Rust.&lt;/p&gt;
+
+&lt;p&gt;&lt;b&gt;TL/DR&lt;/b&gt;: I posted &lt;a href="https://gist.github.com/patshaughnessy/db735e90d58376fdd550b35838aa5339"&gt;the
+code&lt;/a&gt;
+from this article if you want to skip the explanation and just try it.&lt;/p&gt;
+
+&lt;h2&gt;Running a SQL Query Using Ruby and ActiveRecord&lt;/h2&gt;
+
+&lt;p&gt;My actual data set looked different, but suppose as an example I had a Postgres
+table called &lt;span class="code"&gt;users&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+create table users (
+    id serial primary key,
+    first_name varchar(40),
+    last_name  varchar(40)
+);
+&lt;/pre&gt;
+
+
+&lt;p&gt;…and I needed to count the number of users with multiple last names. People
+from Spanish speaking countries, like my wife, often have two last names.
+Because I was in a rush and had to get an answer quickly, I turned to
+ActiveRecord. This simple Ruby script ran a SQL query and also a bit of Ruby
+post-processing to find the number of users with multiple last names:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+user_groups = &lt;span class="constant"&gt;User&lt;/span&gt;.all.partition &lt;span class="keyword"&gt;do&lt;/span&gt; |user|
+  user.last_name.split.size &amp;gt; &lt;span class="integer"&gt;1&lt;/span&gt;
+&lt;span class="keyword"&gt;end&lt;/span&gt;
+
+puts &lt;span class="string"&gt;&lt;span class="delimiter"&gt;&amp;quot;&lt;/span&gt;&lt;span class="content"&gt;Found &lt;/span&gt;&lt;span class="inline"&gt;&lt;span class="inline-delimiter"&gt;#{&lt;/span&gt;user_groups.first.size&lt;span class="inline-delimiter"&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class="content"&gt; users with more than one last name.&lt;/span&gt;&lt;span class="delimiter"&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+puts &lt;span class="string"&gt;&lt;span class="delimiter"&gt;&amp;quot;&lt;/span&gt;&lt;span class="content"&gt;Found &lt;/span&gt;&lt;span class="inline"&gt;&lt;span class="inline-delimiter"&gt;#{&lt;/span&gt;user_groups.last.size&lt;span class="inline-delimiter"&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class="content"&gt; users with one last name.&lt;/span&gt;&lt;span class="delimiter"&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;Ruby and ActiveRecord worked brilliantly. I was done. Neither the language nor
+the tools got in my way and I had the quick answer I needed. After just five
+minutes I moved on to more important work.&lt;/p&gt;
+
+&lt;h2&gt;Time to Exercise My Mind&lt;/h2&gt;
+
+&lt;p&gt;I had a quick answer, but didn’t learn anything. I realized that if I spent all
+of my time getting my work done as quickly as possible and never learned
+anything new, I’d fall behind in the long run.&lt;/p&gt;
+
+&lt;p&gt;Because this task was so simple, I decided to try to write the same report
+using Rust instead of Ruby. But how? Rust is a much more complex, low level
+language than Ruby is. How in the world could I learn about its type system,
+its borrow checker, its compiler/build tools, its debugging tools and, of
+course, its language syntax without spending months and months reading books?&lt;/p&gt;
+
+&lt;p&gt;The answer was just to try it. And what better way to try a new language than
+to work on a simple task like this. It was time for my daily exercise.&lt;/p&gt;
+
+&lt;p&gt;First, I installed &lt;a href="https://www.rust-lang.org/en-US/install.html"&gt;Rust&lt;/a&gt;, poked
+around the &lt;a href="https://doc.rust-lang.org/book/second-edition/index.html"&gt;The Rust Programming
+Language&lt;/a&gt; book a bit,
+and read the excellent &lt;a href="http://diesel.rs/guides/getting-started/"&gt;Diesel
+tutorial&lt;/a&gt;. Rust has great
+documentation and getting up to speed with this extremely complex language is
+just a matter of time, focus and attention. Then I rewrote that simple
+Ruby/ActiveRecord report script above using Rust and Diesel. Here’s how I did
+it.&lt;/p&gt;
+
+&lt;h2&gt;A New Rust Project&lt;/h2&gt;
+
+&lt;p&gt;To get started, I created a new Rust project using
+&lt;a href="https://doc.rust-lang.org/cargo/guide/"&gt;Cargo&lt;/a&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+$ cargo new last_names --bin
+     Created binary (application) `last_names` project
+$ cd last_names
+$ cargo build
+   Compiling last_names v0.1.0 (file:///Users/pat/path/to/last_names)
+    Finished dev [unoptimized + debuginfo] target(s) in 7.68 secs
+$ target/debug/last_names
+Hello, world!
+&lt;/pre&gt;
+
+
+&lt;p&gt;As you can see, Cargo got me started quickly, and I was able to print “Hello
+World” with just a few commands.&lt;/p&gt;
+
+&lt;p&gt;Cargo placed the source code in a Rust file called src/main.rs, which looks
+like this:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/6/9/hello-world.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;As a comparison, I show the equivalent Ruby code below in pink. Pretty simple.&lt;/p&gt;
+
+&lt;h2&gt;From Gemfile to Cargo.toml&lt;/h2&gt;
+
+&lt;p&gt;I knew my script needed to connect to Postgres and execute a SQL statement, so
+I added Diesel as a dependency to my Cargo.toml file:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/6/9/cargo-toml.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Cargo is a dependency manager similar to Ruby’s &lt;a href="https://bundler.io"&gt;Bundler&lt;/a&gt;.
+The Cargo.toml file lists the Rust libraries, or “crates,” that my script will
+use. It plays the same role as the Gemfile does for Ruby projects.&lt;/p&gt;
+
+&lt;p&gt;Then I installed Diesel by running “cargo build” again:&lt;/p&gt;
+
+&lt;pre&gt;
+$ cargo build
+    Updating registry `https://github.com/rust-lang/crates.io-index`
+ Downloading diesel v1.3.0
+ Downloading pq-sys v0.4.5
+
+etc…
+
+  Compiling diesel_derives v1.3.0
+   Compiling diesel v1.3.0
+   Compiling last_names v0.1.0 (file:///Users/pat/path/to/last_names)
+    Finished dev [unoptimized + debuginfo] target(s) in 47.30 secs
+&lt;/pre&gt;
+
+
+&lt;h2&gt;Connecting to Postgres&lt;/h2&gt;
+
+&lt;p&gt;Ok now I’m ready to start working on my report code, back in main.rs. The first
+thing I need to do is open a connection to Postgres. After that, I can figure
+out how to execute my report.&lt;/p&gt;
+
+&lt;p&gt;Here’s how I did it &amp;ndash; again I show the Rust code in grey and the equivalent
+Ruby code below in pink:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/6/9/connect.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;The Rust code is fairly simple and easy to understand: It just passes a
+Postgres connection string to &lt;span
+class="code"&gt;PgConnection::establish&lt;/span&gt;. One interesting and important
+detail here is the call to &lt;span class="code"&gt;expect&lt;/span&gt;. &lt;span
+class="code"&gt;PgConnection::establish&lt;/span&gt; returns a &lt;span
+class="code"&gt;ConnectionResult&lt;T&gt;&lt;/span&gt; value, which is derived from the
+&lt;a href="https://doc.rust-lang.org/std/result/enum.Result.html"&gt;Result enum&lt;/a&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img width="200" src="http://patshaughnessy.net/assets/2018/6/9/result.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;As &lt;em&gt;The Rust Programming Language&lt;/em&gt;
+&lt;a href="https://doc.rust-lang.org/book/second-edition/ch09-00-error-handling.html"&gt;explains&lt;/a&gt;,
+&lt;span class="code"&gt;expect&lt;/span&gt; checks whether the result value contains &lt;span
+class="code"&gt;Ok&lt;/span&gt; or &lt;span class="code"&gt;Err&lt;/span&gt;. If it contains &lt;span
+class="code"&gt;Err&lt;/span&gt;, &lt;span class="code"&gt;expect&lt;/span&gt; prints out the given
+error message.&lt;/p&gt;
+
+&lt;p&gt;Assuming my Postgres server is up and running and contains a database called
+“names,” I can now compile, run my Rust script and connect to Postgres:&lt;/p&gt;
+
+&lt;pre&gt;
+$ cargo build
+   Compiling last_names v0.1.0 (file:///Users/pat/path/to/last_names)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.71 secs
+$ target/debug/last_names
+Connected!
+&lt;/pre&gt;
+
+
+&lt;p&gt;Stepping back for a moment, the Ruby and Rust versions of this code are
+actually very similar. However, the Rust version is a bit more complex because
+I have to explicitly handle the possibility that &lt;span
+class="code"&gt;PgConnection::establish&lt;/span&gt; might return an error. In Ruby I
+can ignore this possibility, although my script would crash if &lt;span
+class="code"&gt;ActiveRecord::Base.establish_connection&lt;/span&gt; ran into a problem
+and raised an exception.&lt;/p&gt;
+
+&lt;h2&gt;Inspecting My Postgres Column Types&lt;/h2&gt;
+
+&lt;p&gt;Using Ruby, ActiveRecord automatically inspects my database table and creates
+methods on my model class for each column. But in Rust, I have to type in code
+that declares each Postgres table and column I plan to use. (Actually, Diesel
+can also inspect my database columns automatically using the &lt;span
+class="code"&gt;infer_schema!&lt;/span&gt; macro, but as a beginner I find it easier to
+type this information in explicitly.)&lt;/p&gt;
+
+&lt;p&gt;Fortunately, Diesel provides a command line tool that makes this easy:&lt;/p&gt;
+
+&lt;pre&gt;
+$ diesel print-schema --database-url=postgres://pat@patshaughnessy.net:5432/names --whitelist users
+table! {
+    users (id) {
+        id -&gt; Int4,
+        first_name -&gt; Nullable&lt;Varchar&gt;,
+        last_name -&gt; Nullable&lt;Varchar&gt;,
+    }
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;The diesel tool printed out a series of Rust macros that declare the name of my
+Postgres table, and the names and types of each of the table’s columns. Notice
+that I provided two command line parameters: the Postgres connection string and
+my database table name.&lt;/p&gt;
+
+&lt;p&gt;The Diesel macros resemble the original SQL definition of my Postgres table:&lt;/p&gt;
+
+&lt;p&gt;&lt;img width="676" src="http://patshaughnessy.net/assets/2018/6/9/sql-to-macro.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Diesel used &lt;span class="code"&gt;Int4&lt;/span&gt; for the primary key column, and
+&lt;span class="code"&gt;Nullable&amp;lt;Varchar&gt;&lt;/span&gt; for each of the Postgres varchar
+string columns. &lt;span class="code"&gt;Nullable&lt;/span&gt; must mean that my Postgres
+SQL schema allows null values for &lt;span class="code"&gt;first_name&lt;/span&gt; and
+&lt;span class="code"&gt;last_name&lt;/span&gt;. In other words, it means that I didn’t
+specify &lt;span class="code"&gt;NOT NULL&lt;/span&gt; for these columns in my
+&lt;span class="code"&gt;CREATE TABLE&lt;/span&gt; command.&lt;/p&gt;
+
+&lt;h2&gt;Creating a Model&lt;/h2&gt;
+
+&lt;p&gt;Next, using these macros as a guide, I wrote a Rust struct to serve as my
+database model. An instance of this struct was going to represent each row in
+my Postgres table:&lt;/p&gt;
+
+&lt;p&gt;&lt;img width="692" src="http://patshaughnessy.net/assets/2018/6/9/macro-to-model.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Just as Diesel mapped each Postgres column type to a Rust macro with the
+corresponding type, I had to choose a Rust type for each Postgres column in my
+new struct. For the id column, I picked Rust’s &lt;span class="code"&gt;i32&lt;/span&gt;
+integer type. This made sense because the &lt;span class="code"&gt;Int4&lt;/span&gt;
+implied a 4 byte or 32 bit integer value. And for each of the string columns, I
+chose the Rust &lt;span class="code"&gt;String&lt;/span&gt; type.&lt;/p&gt;
+
+&lt;p&gt;Finally, I pasted all of this into my main.rs source code file, as follows:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/6/9/model.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Reading this over, the Ruby version is much more concise. In Rust I specified
+the name and type of each column, while in Ruby ActiveRecord figured all of
+that out for me. (Although as I mentioned above, I could have asked Diesel to
+detect the column types automatically also.)&lt;/p&gt;
+
+&lt;h2&gt;Trying to Execute a SQL Statement in Rust&lt;/h2&gt;
+
+&lt;p&gt;Now after all of this setup, I’m finally ready to execute my report. Here’s the
+Rust code I wrote inside the &lt;span class="code"&gt;main()&lt;/span&gt; function, following the call to
+&lt;span class="code"&gt;PgConnection::establish&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/6/9/trying.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;It took me a while to figure out the proper syntax, especially the bits that
+use generic type notation, like &lt;span class="code"&gt;Vec&amp;lt;User&gt;&lt;/span&gt; and &lt;span
+class="code"&gt;Vec&amp;lt;&amp;amp;str&gt;&lt;/span&gt;. Also the &lt;span
+class="code"&gt;.collect::&amp;lt;Vec&amp;lt;&amp;amp;str&gt;&gt;()&lt;/span&gt; code seemed a bit odd to me as
+well, because it includes a type inside a function name. The reason for this
+complex notation is that the &lt;span class="code"&gt;collect&lt;/span&gt; function
+converts the iterator returned by &lt;span class="code"&gt;split&lt;/span&gt; into an
+array, but the Rust compiler needs to know what type of values will be in that
+array. Rust normally uses type inference to figure this out, but in this case
+there’s no way for it to know. Therefore, I needed to specify the &lt;span
+class="code"&gt;Vec&amp;lt;&amp;amp;str&gt;&lt;/span&gt; type manually, telling Rust I wanted an array of
+string references.&lt;/p&gt;
+
+&lt;p&gt;But in the end I was surprised how similar the Rust and Ruby versions of this
+code are! Both load all the user records into memory in a similar way, although
+the Rust version has to check for errors explicitly. And both Rust and Ruby use
+&lt;span class="code"&gt;partition&lt;/span&gt; with a closure that checks whether each
+last name string contains multiple words or not, by calling &lt;span
+class="code"&gt;split&lt;/span&gt;.&lt;/p&gt;
+
+&lt;p&gt;I was very excited to try this out, so I ran the Rust compiler:&lt;/p&gt;
+
+&lt;pre&gt;
+$ cargo build
+   Compiling last_names v0.1.0 (file:///Users/pat/path/to/last_names)
+
+error[E0277]: the trait bound `*const str:
+            diesel::deserialize::FromSql&amp;lt;diesel::sql_types::Nullable&amp;lt;diesel::sql_types::Text&gt;, _&gt;`
+            is not satisfied
+
+  --&gt; src/main.rs:30:25
+   |
+30 |     let results = users.load::&amp;lt;User&gt;(&amp;connection).expect(
+   |                         ^^^^ the trait
+   |                              `diesel::deserialize::FromSql&amp;lt;diesel::sql_types::Nullable
+   |                              &amp;lt;diesel::sql_types::Text&gt;, _&gt;` is not implemented for `*const str`
+   |
+   = help: the following implementations were found:
+             &amp;lt;*const str as diesel::deserialize::FromSql&amp;lt;diesel::sql_types::Text, DB&gt;&gt;
+             &amp;lt;*const [u8] as diesel::deserialize::FromSql&amp;lt;diesel::sql_types::Binary, DB&gt;&gt;
+   = note: required because of the requirements on the impl of `diesel::deserialize::FromSql&amp;lt;diesel::sql_types::Nullable&amp;lt;diesel::sql_types::Text&gt;, _&gt;` for `std::string::String`
+   = note: required because of the requirements on the impl of `diesel::Queryable&amp;lt;diesel::sql_types::Nullable&amp;lt;diesel::sql_types::Text&gt;, _&gt;` for `std::string::String`
+   = note: required because of the requirements on the impl of `diesel::Queryable&amp;lt;(diesel::sql_types::Integer, diesel::sql_types::Nullable&amp;lt;diesel::sql_types::Text&gt;, diesel::sql_types::Nullable&amp;lt;diesel::sql_types::Text&gt;), _&gt;` for `(i32, std::string::String, std::string::String)`
+   = note: required because of the requirements on the impl of `diesel::Queryable&amp;lt;(diesel::sql_types::Integer, diesel::sql_types::Nullable&amp;lt;diesel::sql_types::Text&gt;, diesel::sql_types::Nullable&amp;lt;diesel::sql_types::Text&gt;), _&gt;` for `User`
+   = note: required because of the requirements on the impl of `diesel::query_dsl::LoadQuery&amp;lt;_, User&gt;` for `users::table`
+
+error: aborting due to previous error
+
+error: Could not compile `last_names`.
+
+To learn more, run the command again with --verbose.
+&lt;/pre&gt;
+
+
+&lt;p&gt;Ugh &amp;ndash; what happened? I started to realize how difficult error messages from the
+Rust compiler can be to understand, especially for beginners like me.&lt;/p&gt;
+
+&lt;p&gt;And I certainly didn’t want to try the “—verbose” option the Rust compiler
+suggested. This message was already verbose enough!&lt;/p&gt;
+
+&lt;h2&gt;Rust’s Type System Keeps Me Out of Trouble&lt;/h2&gt;
+
+&lt;p&gt;After a while, I realized what the problem was. Reading the error message again
+more carefully, I saw the line:&lt;/p&gt;
+
+&lt;pre&gt;
+diesel::sql_types::Nullable&lt;diesel::sql_types::Text&gt; ...is not satisfied
+&lt;/pre&gt;
+
+
+&lt;p&gt;Ah &amp;ndash; the problem must have to do with the &lt;span class="code"&gt;Nullable&lt;/span&gt;
+macro the Diesel utility generated for me. That indicated that my underlying
+Postgres column allowed null values. At first, I thought maybe I should add
+&lt;span class="code"&gt;NOT NULL&lt;/span&gt; to my Postgres table and prevent users with
+null last names. That must be the answer.&lt;/p&gt;
+
+&lt;p&gt;But thinking about this some more, I realized that maybe having no last name is
+a valid state. That some people really don’t have last names… Bono, Lady Gaga,
+or Sting. Or maybe these are their last names and they have no first names?
+Either way it seemed to me that my report code should handle null values, and
+that it shouldn’t make assumptions about what’s in the data set.&lt;/p&gt;
+
+&lt;p&gt;I decided to adapt my Rust code to make this work, and to do that I needed a
+way of saving null values in my User struct. The problem, what the Rust
+compiler was trying to tell me, was that my User struct could not handle nulls
+as written. I needed to use an option type instead:&lt;/p&gt;
+
+&lt;p&gt;&lt;img width="693" src="http://patshaughnessy.net/assets/2018/6/9/option-model.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Like the &lt;span class="code"&gt;Result&lt;/span&gt; enum we saw above, &lt;span
+class="code"&gt;Option&lt;/span&gt; is an enum that can contain either &lt;span
+class="code"&gt;Some&lt;/span&gt; or &lt;span class="code"&gt;None&lt;/span&gt;… i.e. a null value:&lt;/p&gt;
+
+&lt;p&gt;&lt;img width="170" src="http://patshaughnessy.net/assets/2018/6/9/option.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;To learn more about the &lt;span class="code"&gt;Option&lt;/span&gt; type, read &lt;a href="https://doc.rust-lang.org/book/second-edition/ch06-01-defining-an-enum.html#the-option-enum-and-its-advantages-over-null-values"&gt;Chapter
+6&lt;/a&gt;
+from &lt;em&gt;The Rust Programming Language&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;After changing my &lt;span class="code"&gt;User&lt;/span&gt; struct, I then had to rework
+the closure inside of &lt;span class="code"&gt;partition&lt;/span&gt;. Here’s what I ended
+up with:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/6/9/unwrap.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;I wrote &lt;span class="code"&gt;if let Some(ref name)&lt;/span&gt; to check whether or not
+the last name of each user struct was null. In other words, I “unwrapped” the
+last name. The &lt;span class="code"&gt;ref&lt;/span&gt; keyword satisfies Rust’s borrow
+checker, which enforces Rust’s unique and innovative memory ownership model.
+Without &lt;span class="code"&gt;ref&lt;/span&gt;, the Rust compiler would give me another
+error: “cannot move out of borrowed content.” To learn more about Rust’s
+ownership model, see &lt;a href="https://doc.rust-lang.org/book/second-edition/ch04-00-understanding-ownership.html"&gt;Chapter
+4&lt;/a&gt;
+of &lt;em&gt;The Rust Programming Language&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Finally, I compiled and ran my Rust code, and saw the results I expected:&lt;/p&gt;
+
+&lt;pre&gt;
+$ target/debug/last_names
+Connected!
+Found 20 users with more than one last name.
+Found 80 users with one last name.
+&lt;/pre&gt;
+
+
+&lt;p&gt;As a test, I tried adding a user with no last name and got the expected results
+&amp;ndash; the user with no last name was counted as if they had one:&lt;/p&gt;
+
+&lt;pre&gt;
+$ psql names
+psql (9.6.3)
+Type "help" for help.
+names=# INSERT INTO users (first_name, last_name) VALUES ('Bono', NULL);
+INSERT 0 1
+names=# \q
+
+$ target/debug/last_names
+Connected!
+Found 20 users with more than one last name.
+Found 81 users with one last name.
+&lt;/pre&gt;
+
+
+&lt;p&gt;But when I reran my original Ruby code with a null last name, it crashed!&lt;/p&gt;
+
+&lt;pre&gt;
+$ ruby main.rb
+Connected.
+main.rb:18:in `block in \&lt;main\&gt;': undefined method `split' for nil:NilClass (NoMethodError)
+&lt;/pre&gt;
+
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/6/9/fix-ruby.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Rewriting my Ruby code in Rust revealed a bug I never knew I had. As shown
+above, I had to rework my Ruby code to check for a null last name inside the
+block, similar to what I wrote in Rust. Even though it required more typing and
+more work, Rust’s strict type system told me my code might crash at compile
+time, while Ruby didn&amp;rsquo;t tell me anything was wrong until runtime.&lt;/p&gt;
+
+&lt;h2&gt;Rust vs. Ruby&lt;/h2&gt;
+
+&lt;p&gt;In the end I was able to rewrite my Ruby code in Rust and get the same results.
+&lt;a href="https://gist.github.com/patshaughnessy/db735e90d58376fdd550b35838aa5339"&gt;This
+gist&lt;/a&gt;
+contains the Rust code I ended up with, if you’re interested in trying this
+yourself.&lt;/p&gt;
+
+&lt;p&gt;Writing the same algorithm in both languages and comparing, I noticed a few
+obvious differences. First, the runtime execution performance was far superior
+using Rust. I was able to load and process large sets of User records much,
+much faster using Rust. But development performance was better using Ruby.  The
+speed at which I was able to write working code was faster using Ruby.  It took
+minutes to write the Ruby version, but hours to write the Rust version.  Of
+course, I’m a Rust novice. An experienced Rust developer who knew what they
+were doing could probably have written this in just a few minutes as well.
+Second, Ruby is concise, while Rust is verbose. It took much more typing to
+write Rust. But this extra thoroughness led me to find a bug in my Ruby code I
+never knew I had.&lt;/p&gt;
+
+&lt;p&gt;Which language is better? Neither. Ruby and Rust are different tools that are
+best used in different circumstances.&lt;/p&gt;
+
+&lt;p&gt;In the end what matters is that I learned something. One language isn’t better
+than another &amp;ndash; but now I’m a better developer because I took the time to learn
+something new. By taking 5 hours instead of 5 minutes to accomplish a simple
+task, I gained valuable insight and knowledge. I gave my mind the exercise it
+was so hungry for. And thankfully no one noticed it took me 5 hours to run a
+report that should have taken 5 minutes.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>How Rust Implements Tagged Unions</title>
+    <link href="http://patshaughnessy.net/2018/3/15/how-rust-implements-tagged-unions" rel="alternate"/>
+    <id>http://patshaughnessy.net/2018/3/15/how-rust-implements-tagged-unions</id>
+    <published>2018-03-15T03:00:00Z</published>
+    <updated>2018-03-15T03:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2018/3/15/covers.png"&gt;&lt;br/&gt;
+&lt;i&gt; &lt;small&gt;(&lt;a href="https://www.amazon.com/Programming-Language-Brian-W-Kernighan/dp/0131101633/ref=pd_lpo_sbs_14_img_1?_encoding=UTF8&amp;psc=1&amp;refRID=J7H21QEX2A2NN3Y6EG00"&gt;The C Programming Language&lt;/a&gt; and &lt;a href="https://nostarch.com/</summary>
+    <content type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2018/3/15/covers.png"&gt;&lt;br/&gt;
+&lt;i&gt; &lt;small&gt;(&lt;a href="https://www.amazon.com/Programming-Language-Brian-W-Kernighan/dp/0131101633/ref=pd_lpo_sbs_14_img_1?_encoding=UTF8&amp;psc=1&amp;refRID=J7H21QEX2A2NN3Y6EG00"&gt;The C Programming Language&lt;/a&gt; and &lt;a href="https://nostarch.com/Rust"&gt;The Rust Programming Language&lt;/a&gt;)&lt;/small&gt;&lt;/i&gt; 
+&lt;/div&gt;
+
+
+&lt;p&gt;Rust &lt;a href="https://www.rust-lang.org/en-US/"&gt;describes itself&lt;/a&gt; as:&lt;/p&gt;
+
+&lt;br/&gt;
+
+
+
+
+&lt;blockquote&gt;
+…a systems programming language that runs blazingly fast, prevents segfaults, and guarantees thread safety.
+&lt;/blockquote&gt;
+
+
+&lt;p&gt;Of course, this is in contrast to C, a different systems programming language
+that encourages segfaults and makes no guarantees at all about thread safety.
+Rust improves on C in many ways, most famously with its innovative ownnership
+model for managing memory.&lt;/p&gt;
+
+&lt;p&gt;Another less obvious improvement Rust makes to C has to do with the &lt;span
+class="code"&gt;union&lt;/span&gt; keyword. The Rust compiler implements &lt;em&gt;tagged
+unions&lt;/em&gt;, which prevent you from crashing your program by initializing a union
+with one variant and accessing it with another. &lt;del&gt;But the Rust doesn’t include
+the &lt;span class="code"&gt;union&lt;/span&gt; keyword at all&lt;/del&gt;; instead, Rust
+uses &lt;span class="code"&gt;enum&lt;/span&gt; to improve on both C enums and C unions at
+the same time.&lt;/p&gt;
+
+&lt;div style="clear: both"&gt;&lt;/div&gt;
+
+
+&lt;p&gt;(Update: I heard &lt;a href="https://twitter.com/josh_triplett/status/974312496717742080"&gt;on
+Twitter&lt;/a&gt; and in
+the comments that Rust does include untagged unions for use in FFI to
+interoperate with C, or for unsafe code building custom unions.)&lt;/p&gt;
+
+&lt;p&gt;Not sure what a tagged union is? Or why it’s an improvement over an old
+fashioned C union? Today I’ll explain. First I’ll start with a quick review of
+C unions, how they work and why they are dangerous. Then I’ll show you how Rust
+enums improve on them.&lt;/p&gt;
+
+&lt;h2&gt;C Unions&lt;/h2&gt;
+
+&lt;p&gt;Unions are one of the most dangerous features of C. Here’s an example:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/union1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Here the union &lt;span class="code"&gt;num_or_str&lt;/span&gt; saves either a number or
+a character pointer but not both. (A union can contain any number of members;
+for simplicity my example union has only two.) On the right I show how the C
+compiler would allocate memory for an instance of &lt;span
+class="code"&gt;num_or_str&lt;/span&gt;. It allocates enough memory to hold the longest
+value in the union, but not both values at the same time. The integer is a
+short, meaning it occupies 16 bits or two bytes, and the string is a char
+pointer which takes 64 bits or 8 bytes using a modern 64-bit CPU. The two
+options for what might be stored in the union, &lt;span class="code"&gt;num&lt;/span&gt;
+and &lt;span class="code"&gt;str&lt;/span&gt; in this example, are known as &lt;em&gt;variants&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2&gt;Why C Unions Are Dangerous&lt;/h2&gt;
+
+&lt;p&gt;Unions are dangerous because you, the C programmer, need to remember which
+variant you set in the union. If you save one type of value but then access the
+other, your program will crash.&lt;/p&gt;
+
+&lt;p&gt;For example this code works fine:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/c-code1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;But if you forget &lt;span class="code"&gt;a_number&lt;/span&gt; contains a number, and use
+&lt;span class="code"&gt;a_number&lt;/span&gt; as a string instead, your program will
+crash:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/c-code2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Notice the C compiler didn’t help me here at all. It didn’t display any sort of
+warning or error when I wrote &lt;span class="code"&gt;a_number.str&lt;/span&gt;. It
+silently allowed me to write dangerous code; in fact, union syntax encouraged
+me to introduce a segmentation fault.&lt;/p&gt;
+
+&lt;p&gt;Writing C code with unions is like driving very fast down a highway full of
+potholes. You might be the best driver in the world, but eventually you’re
+going to hit one of the holes and crash.&lt;/p&gt;
+
+&lt;h2&gt;Tagged Unions&lt;/h2&gt;
+
+&lt;p&gt;C programmers have been writing code with unions for years &amp;ndash; for decades in
+fact. How have they avoided this problem? There must be a safe way of writing C
+code with unions.&lt;/p&gt;
+
+&lt;p&gt;The most common and robust solution is to keep track of which union variant is
+valid using an integer value saved right next to the union in memory. This
+integer is known as a tag, and the combination of the tag and the union is a
+&lt;em&gt;tagged union&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Here’s an example:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/tagged_union.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;On the right side I’ve allocated some memory right before the union for the tag
+using a struct. C structs, unlike unions, allocate enough memory to store all
+of their members at once. Note: Using two bytes to save a small integer value
+is unnecessary. C programs often use only one byte, or even represent the
+integer value using a bit mask inside the union’s values. But the principle
+remains the same.&lt;/p&gt;
+
+&lt;p&gt;Now when I save an integer in an instance of the union I can also set the tag
+to the value 1, for example, which I decide will mean that &lt;span
+class="code"&gt;a_number&lt;/span&gt; contains a number:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/c-code3.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;And if I want to save a string instead, I set the tag to 2, for example:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/c-code4.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Later when I access the tagged union, I first check the tag before deciding
+which variant I can access:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/c-code5.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Of course, tagged unions are not foolproof. I invented the tag values 1 and 2
+and wrote the code that checks for them. There’s nothing to prevent me from
+forgetting to save the tag value, saving the wrong tag value or misinterpreting
+the tag value when I later read it. And, if I ever add new variants to the
+union, I have to add a new branch to every &lt;span class="code"&gt;if&lt;/span&gt;
+statement in my app that checks the tags, handling the new value. Needless to
+say, the C compiler won’t help me find those &lt;span class="code"&gt;if&lt;/span&gt;
+statements or check whether I’ve covered all the possible tag values.&lt;/p&gt;
+
+&lt;p&gt;I’m a forgetful and  easily distracted person. I need a programming language
+that will keep me out of trouble. Even with tagged unions I’m sure I would
+write dangerous, crashing C code before long.&lt;/p&gt;
+
+&lt;h2&gt;Tagged Unions in Rust&lt;/h2&gt;
+
+&lt;p&gt;Rust implements tagged unions using the &lt;span class="code"&gt;enum&lt;/span&gt; keyword.
+For example, to declare a Rust enum type equivalent to the C tagged union above
+I write:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/rust-enum1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;The questions for today are: Why are enums equivalent to tagged unions in C?
+And: What should I draw on the right side? What would I see if I could find and
+examine an enum in the memory space of a running Rust process?&lt;/p&gt;
+
+&lt;h2&gt;Saving a Rust Enum&lt;/h2&gt;
+
+&lt;p&gt;To find out, let’s create an instance of &lt;span class="code"&gt;NumOrStr&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/rust-enum2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Notice that instead of 4, I’ve saved a more recognizable value, 1234. Now, if I
+compile it with the &lt;span class="code"&gt;-—emit asm&lt;/span&gt; flag:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/rust-emit-asm.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;…Rust generates a file called union.s which contains the assembly language
+version of my program. If I open union.s and search for 1234, the integer value
+I saved above, I see:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/asm1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;I’ve found it; here are the x86 assembly language instructions that initialize
+&lt;span class="code"&gt;a_number&lt;/span&gt;. These show me exactly how Rust represents
+enums in memory, how Rust implements tagged unions.&lt;/p&gt;
+
+&lt;p&gt;The only problem is… I have no idea what this means!&lt;/p&gt;
+
+&lt;h2&gt;The movw x86 Instruction&lt;/h2&gt;
+
+&lt;p&gt;What does &lt;span class="code"&gt;movw&lt;/span&gt; mean? And what about &lt;span
+class="code"&gt;-32(%rbp)&lt;/span&gt;?&lt;/p&gt;
+
+&lt;p&gt;It turns out x86 assembly language isn’t that hard to follow, once you learn
+the basic syntax. For a quick introduction, see my article from 2016: &lt;a href="http://patshaughnessy.net/2016/11/26/learning-to-read-x86-assembly-language"&gt;Learning
+to Read x86 Assembly
+Language&lt;/a&gt;.
+Intel, the company that built the microprocessor inside my Mac, defines the
+&lt;span class="code"&gt;mov&lt;/span&gt; instruction to mean “move.” (Note: the
+instructions I show here that &lt;span class="code"&gt;rustc —emit asm&lt;/span&gt;
+generates aren’t written using Intel x86 syntax, but with GAS x86 syntax
+instead.)&lt;/p&gt;
+
+&lt;p&gt;Here’s a diagram showing what the first &lt;span class="code"&gt;movw&lt;/span&gt;
+instruction moves:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/asm2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;It turns out that &lt;span class="code"&gt;movw&lt;/span&gt; stands for “move a word.” A
+word is defined as 16 bits, or 2 bytes. There are a few different variations on
+move, &lt;span class="code"&gt;movb&lt;/span&gt;, &lt;span class="code"&gt;movw&lt;/span&gt;, &lt;span
+class="code"&gt;movl&lt;/span&gt;, &lt;span class="code"&gt;movq&lt;/span&gt;, which move 1
+byte, 2 bytes, 4 bytes or 8 bytes respectively.&lt;/p&gt;
+
+&lt;p&gt;Next, the &lt;span class="code"&gt;$&lt;/span&gt; notation indicates a literal value &amp;ndash;  in
+this case zero: &lt;span class="code"&gt;$0&lt;/span&gt;. Now we can see the first
+instruction above is moving 2 bytes containing the value zero. Similarly, the
+second instruction is moving 2 bytes containing the value 1234:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/asm3.png"/&gt;&lt;/p&gt;
+
+&lt;h2&gt;The rbp Register&lt;/h2&gt;
+
+&lt;p&gt;But where are these &lt;span class="code"&gt;movw&lt;/span&gt; instructions moving these
+values to? To understand that we need to understand the odd &lt;span
+class="code"&gt;-32(%rbp)&lt;/span&gt; syntax on the right side of the instructions. The
+&lt;span class="code"&gt;%&lt;/span&gt; sign indicates a register inside my Mac’s
+microprocessor, in this case the “base pointer” register. So &amp;ldquo;bp&amp;rdquo; means &amp;ldquo;base
+pointer.&amp;rdquo; And the “r” prefix in &amp;ldquo;rbp&amp;rdquo; means the move instruction is using all 8
+bytes (64 bits) of this register’s value.&lt;/p&gt;
+
+&lt;p&gt;The &lt;span class="code"&gt;-32(%rbp)&lt;/span&gt; notation calculates a memory address
+for the instruction using the contents of the &lt;span class="code"&gt;%rbp&lt;/span&gt;
+register &amp;ndash; in this case the address of where to move the data to. The
+expression &lt;span class="code"&gt;-32(%rbp)&lt;/span&gt; in English means: “Take the 64
+bit memory address value from the base pointer register, and subtract 32 from
+it.”&lt;/p&gt;
+
+&lt;p&gt;Compiled Rust programs &amp;ndash; all programs really &amp;ndash; that run on the x86 platform
+store values for local variables on the stack, using the base pointer register
+in this fashion. The base pointer, as it’s name indicates, stores the base
+address of my program&amp;rsquo;s current stack frame. Each local variable in my code,
+for example &lt;span class="code"&gt;a_number&lt;/span&gt;, is saved somewhere on the
+stack. If you’re not familiar with the concept of a stack, think of it as a
+convenient place for quickly saving and retrieving values while your program is
+running.&lt;/p&gt;
+
+&lt;h2&gt;How Rust Saves an Integer Enum Variant&lt;/h2&gt;
+
+&lt;p&gt;Taking a step back for a moment, here’s what we’ve learned so far. When I save
+an enum value containing an integer, Rust saves &lt;em&gt;two&lt;/em&gt; values, 0 and 1234:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/save1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;What does the &lt;span class="code"&gt;0&lt;/span&gt; mean? Rust records a zero to indicate
+that &lt;span class="code"&gt;a_number&lt;/span&gt; uses the &lt;span
+class="code"&gt;NumOrStr::Num&lt;/span&gt; variant. In other words, &lt;span
+class="code"&gt;a_number&lt;/span&gt; is a tagged union, and the zero value is the tag.
+We know the tag occupies 2 bytes because of the &lt;span class="code"&gt;movw&lt;/span&gt;
+instruction above. The integer value itself, &lt;span class="code"&gt;1234&lt;/span&gt;,
+also takes 2 bytes because I declared it using &lt;span
+class="code"&gt;Num(i16)&lt;/span&gt;, and we saw Rust used a movw to save that also.&lt;/p&gt;
+
+&lt;h2&gt;How Rust Saves an String Enum Variant&lt;/h2&gt;
+
+&lt;p&gt;But what about the other variant, the string? When I save a string in &lt;span
+class="code"&gt;NumOrStr&lt;/span&gt;, what does Rust do? To find out, I’ll replace my
+main function from above with this line of code:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/save2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;The I’ll compile it again using the &lt;span class="code"&gt;&amp;mdash;emit asm&lt;/span&gt;
+option. Now I find this assembly language code in the union.s file:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/asm4.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Unfortunately this code snippet is much more complex: It first calls &lt;span
+class="code"&gt;String::from&lt;/span&gt; passing a string literal, and then saves the
+string into the enum via a method called &lt;span
+class="code"&gt;drop_in_place&lt;/span&gt;. This is much harder to understand.&lt;/p&gt;
+
+&lt;p&gt;Rather than trying to figure this out, I decided to debug my Rust sample
+program using LLDB, and inspect the memory &lt;span class="code"&gt;a_string&lt;/span&gt;
+occupies. I found that Rust used 26 bytes to represent the string variant,
+starting with a 16 bit word containing 1:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/save3.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;This is again the tag; in this case &lt;span class="code"&gt;1&lt;/span&gt; means &lt;span
+class="code"&gt;a_string&lt;/span&gt; uses the &lt;span class="code"&gt;NumOrStr::Str&lt;/span&gt;
+variant. Following this I found a pointer to the string itself:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/save4.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Pointers on a 64-bit microprocessor occupy 8 bytes and contain the memory
+address of something, in this case my string &amp;ldquo;This is a test.” After the
+pointer I found two 64 bit values, each containing 15:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/save5.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;These are two attributes of the string: its capacity and length. By inspecting
+my process&amp;rsquo;s memory I’ve started to learn a bit about how Rust manages memory
+for strings.&lt;/p&gt;
+
+&lt;p&gt;But what’s important for me today is the first word, the value 1. Again, we see
+the same pattern. Rust saves an integer value, the tag, indicating which
+variant this instance of the enum uses. Then Rust saves the enum variant’s
+payload in the memory that follows:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/save6.png"/&gt;&lt;/p&gt;
+
+&lt;h2&gt;Tagged Unions in Rust and C&lt;/h2&gt;
+
+&lt;p&gt;Let’s review by declaring a tagged union in C and Rust:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/review1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;On the left using C, I have to include the tag explicitly in a surrounding
+struct. Rust handles this for me automatically, saving the tag value inside the
+enum alongside the enum’s value. The code looks very different, but as we saw above
+the implementations are&lt;em&gt; identical&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Using a tagged union looks somewhat similar in C and Rust:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/3/15/review2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;But there are very important differences here! Using C, I need to remember to
+check the tag and to use the proper variant inside the union. The Rust
+compiler, on the other hand, checks the tag for me automatically and won’t
+allow me to access the wrong variant. The code inside of &lt;span class="code"&gt;if
+let&lt;/span&gt; will never be executed unless the internal tag value matches the
+&lt;span class="code"&gt;NumOrStr::Num&lt;/span&gt; variant.&lt;/p&gt;
+
+&lt;p&gt;Under the hood, the two languages implement tagged unions the same way. But
+writing code in C and Rust is very different. C encourages me to write
+dangerous, crashing code, while Rust prevents me from writing dangerous code in
+the first place.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Learning Rust: If Let vs. Match</title>
+    <link href="http://patshaughnessy.net/2018/1/18/learning-rust-if-let-vs--match" rel="alternate"/>
+    <id>http://patshaughnessy.net/2018/1/18/learning-rust-if-let-vs--match</id>
+    <published>2018-01-18T04:00:00Z</published>
+    <updated>2018-01-18T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2018/1/18/dictionary.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;Human languages have similar words with different&lt;br/&gt; shades of meaning. Some computer languages do too.&lt;br/&gt;
+  &lt;small&gt;(from: &lt;a href="https://commons.wikimedia.org/wiki/File:ĸra_in_a_dictionary_(ubt).JPG"&gt;Wikimedia Commons&lt;/</summary>
+    <content type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2018/1/18/dictionary.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;Human languages have similar words with different&lt;br/&gt; shades of meaning. Some computer languages do too.&lt;br/&gt;
+  &lt;small&gt;(from: &lt;a href="https://commons.wikimedia.org/wiki/File:ĸra_in_a_dictionary_(ubt).JPG"&gt;Wikimedia Commons&lt;/a&gt;)&lt;/small&gt;&lt;/i&gt; 
+&lt;/div&gt;
+
+
+&lt;p&gt;This year I’ve decided to try to learn &lt;a href="https://www.rust-lang.org"&gt;Rust&lt;/a&gt;. I’m
+fascinated by its ownership model for memory management; I’m curious what the
+claims about safety are all about; and, I love how it incorporates ideas from
+the functional programming world. But I haven’t gotten to all of that yet &amp;ndash; I’m
+just getting started learning the basic syntax.&lt;/p&gt;
+
+&lt;p&gt;Learning a computer language is just like learning a human language. You have
+to try to read and write it everyday, even if just for a few minutes. You need
+to get to know some native speakers. And there’s no way around it: You need to
+learn the basic vocabulary of the language, word by word. To make things worse,
+our human languages usually have several  words that mean the same thing. Which
+one should I use? Sometime only a native speaker will really know.&lt;/p&gt;
+
+&lt;p&gt;This week I was reading about &lt;span class="code"&gt;if let&lt;/span&gt; and &lt;span
+class="code"&gt;match&lt;/span&gt; in &lt;a href="https://doc.rust-lang.org/book/second-edition/ch06-03-if-let.html"&gt;The Rust Programming
+Book&lt;/a&gt;
+(TRPL). I read that &lt;span class="code"&gt;if let&lt;/span&gt; is really syntactic sugar
+for &lt;span class="code"&gt;match&lt;/span&gt;:&lt;/p&gt;
+
+&lt;div style="padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+&lt;img width="500" src="http://patshaughnessy.net/assets/2018/1/18/trpl-quote.png"/&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;This intrigued me. The phrase “syntactic sugar” implies the two code snippets
+don’t only produce the same results, it means the compiler generates exactly
+the same code in each case.&lt;/p&gt;
+
+&lt;p&gt;Does the Rust compiler really generate exactly the same code for &lt;span
+class="code"&gt;if let&lt;/span&gt; as it does for &lt;span class="code"&gt;match&lt;/span&gt;? Read
+on to find out. Today I’ll start with a quick review of the syntax and meaning
+of &lt;span class="code"&gt;if let&lt;/span&gt; and &lt;span class="code"&gt;match&lt;/span&gt;. Then
+I’ll take a look at how Rust compiles &lt;span class="code"&gt;if let&lt;/span&gt; and
+&lt;span class="code"&gt;match&lt;/span&gt;, at what code it produces.&lt;/p&gt;
+
+&lt;h2&gt;If Let Compares a Pattern with a Value&lt;/h2&gt;
+
+&lt;p&gt;The idea behind &lt;span class="code"&gt;if let&lt;/span&gt; is that it compares a pattern
+with a value:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/1/18/pattern-value.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;In this example &lt;span class="code"&gt;if let&lt;/span&gt; compares the pattern &lt;span
+class="code"&gt;Some(3)&lt;/span&gt; with the value &lt;span
+class="code"&gt;some_u8_value&lt;/span&gt;. If there’s a match, &lt;span class="code"&gt;if
+let&lt;/span&gt; executes the &lt;span class="code"&gt;println!&lt;/span&gt; code inside the
+block.&lt;/p&gt;
+
+&lt;h2&gt;If Let Also Assigns Values&lt;/h2&gt;
+
+&lt;p&gt;&lt;span class="code"&gt;if let&lt;/span&gt; assigns a value at the same time, when the
+pattern matches the value. This is the idea behind including the &lt;span class="code"&gt;let&lt;/span&gt; keyword
+after &lt;span class="code"&gt;if&lt;/span&gt;. This is more apparent if I rewrite the example using a variable &lt;span class="code"&gt;i&lt;/span&gt;
+instead of 3. I&amp;rsquo;ll also add a main function so I can execute the code:&lt;/p&gt;
+
+&lt;pre&gt;
+fn main() {
+  let some_u8_value = Some(3u8);
+  if let Some(i) = some_u8_value {
+     println!("assigned {} to i", i);
+  }
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;When I saved this in a file called if-let.rs and ran it, I got:&lt;/p&gt;
+
+&lt;pre&gt;
+$ rustc if-let.rs
+$ ./main
+Assigned 3 to i
+&lt;/pre&gt;
+
+
+&lt;p&gt;&lt;span class="code"&gt;if let&lt;/span&gt; “unwrapped” the option structure, and assigned
+the value 3 to the identifier &lt;span class="code"&gt;i&lt;/span&gt;.&lt;/p&gt;
+
+&lt;h2&gt;Match: If Let’s Big Brother&lt;/h2&gt;
+
+&lt;p&gt;As TRPL explains, I could also have written this using the &lt;span
+class="code"&gt;match&lt;/span&gt; keyword, as follows:&lt;/p&gt;
+
+&lt;pre&gt;
+fn main() {
+    let some_u8_value = Some(3u8);
+    match some_u8_value {
+        Some(i) =&gt; println!("Matched: {}", i),
+        None =&gt; (),
+    }
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;To write this all I had to do was move things around a bit in my &lt;span
+class="code"&gt;if let&lt;/span&gt; code snippet from above:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2018/1/18/if-let-match.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Because there was no else clause for the &lt;span class="code"&gt;if let&lt;/span&gt;
+statement, I used &lt;span class="code"&gt;None =&gt; ()&lt;/span&gt; in match.&lt;/p&gt;
+
+&lt;p&gt;Saving this code in match.rs and running it I got the same result:&lt;/p&gt;
+
+&lt;pre&gt;
+$ rustc match.rs
+$ ./main
+Matched: 3
+&lt;/pre&gt;
+
+
+&lt;h2&gt;Mid-Level IR (MIR)&lt;/h2&gt;
+
+&lt;p&gt;I was curious though: If these two code snippets are entirely equivalent, then
+the Rust compiler should generate &lt;em&gt;exactly the same executable program&lt;/em&gt; when I
+compile them. In theory, therefore, I should be able to compare the two
+executable binaries to test whether TRPL’s statement about syntactic sugar is
+accurate. But comparing binary executables might not work. Likely there are
+timestamps or other ephemeral values encoded in the executable that would break
+the comparison. I decided to look for an easier way to test the compiler’s
+output.&lt;/p&gt;
+
+&lt;p&gt;Then I came across mid-level intermediate representation (MIR), described &lt;a href="https://blog.rust-lang.org/2016/04/19/MIR.html"&gt;here
+on the Rust blog&lt;/a&gt;. MIR is an
+internal text language the rust compiler produces when you include the
+&lt;span class="code"&gt;—emit-mir&lt;/span&gt; flag, like this:&lt;/p&gt;
+
+&lt;pre&gt;
+$ rustc --emit mir if-let.rs
+&lt;/pre&gt;
+
+
+&lt;p&gt;With this option specified, rust generates a file called if-let.mir. Opening up
+this file, I see:&lt;/p&gt;
+
+&lt;pre&gt;
+// WARNING: This output format is intended for human consumers only
+// and is subject to change without notice. Knock yourself out.
+fn main() -&gt; () {
+    let mut _0: ();                      // return pointer
+    scope 1 {
+        let _1: std::option::Option&lt;u8&gt;; // "some_u8_value" in scope 1 at src/if-let.rs:16:9: 16:22
+
+etc…
+&lt;/pre&gt;
+
+
+&lt;p&gt;“Knock yourself out;” now I’m really intrigued!&lt;/p&gt;
+
+&lt;h2&gt;A First Look at MIR&lt;/h2&gt;
+
+&lt;p&gt;I decided to compare the MIR text file the Rust compiler produced for the &lt;span class="code"&gt;if
+let&lt;/span&gt; snippet vs. the &lt;span class="code"&gt;match&lt;/span&gt; snippet. If Rust
+considers &lt;span class="code"&gt;if let&lt;/span&gt; to be syntactic sugar for &lt;span
+class="code"&gt;match&lt;/span&gt;, then the MIR representation of the two snippets
+should be the same.&lt;/p&gt;
+
+&lt;p&gt;But when I started reading the MIR code, I found the call to the &lt;span
+class="code"&gt;println!&lt;/span&gt; macro generated a lot of verbose text:&lt;/p&gt;
+
+&lt;pre&gt;
+let mut _3: isize;
+let mut _4: ();
+let mut _5: std::fmt::Arguments;
+let mut _6: &amp;[&amp;str];
+let mut _7: &amp;[&amp;str; 2];
+let mut _8: &amp;[&amp;str; 2];
+let mut _9: &amp;[std::fmt::ArgumentV1];
+let mut _10: &amp;[std::fmt::ArgumentV1; 1];
+let mut _11: &amp;[std::fmt::ArgumentV1; 1];
+let mut _12: [std::fmt::ArgumentV1; 1];
+let mut _13: (&amp;u8,);
+let mut _14: &amp;u8;
+let mut _16: std::fmt::ArgumentV1;
+let mut _17: &amp;u8;
+let mut _18: fn(&amp;u8, &amp;mut std::fmt::Formatter&lt;'_&gt;) -&gt; std::result::Result&lt;(), std::fmt::Error&gt;;
+&lt;/pre&gt;
+
+
+&lt;p&gt;All of this MIR pseudocode might confuse my comparison unnecessarily, so I
+decided to simplify my &lt;span class="code"&gt;if let&lt;/span&gt; example by removing the
+&lt;span class="code"&gt;println!&lt;/span&gt; call entirely. I rewrote the &lt;span
+class="code"&gt;if let&lt;/span&gt; snippet like this (if-let.rs):&lt;/p&gt;
+
+&lt;pre&gt;
+fn main() {
+    let some_u8_value = Some(3u8);
+    if let Some(i) = some_u8_value {
+        let _ = i;
+    }
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;And the &lt;span class="code"&gt;match&lt;/span&gt; snippet like this (match.rs):&lt;/p&gt;
+
+&lt;pre&gt;
+fn main() {
+    let some_u8_value = Some(3u8);
+    match some_u8_value {
+        Some(i) =&gt; { let _ = i; }
+        None =&gt; ()
+    }
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;I also noticed the MIR file contained many comments with line numbers:&lt;/p&gt;
+
+&lt;pre&gt;
+_2 = ((_1 as Some).0: u8);       // scope 3 at if-let.rs:3:17: 3:18
+StorageLive(_5);                 // scope 3 at &lt;print macros&gt;:2:27: 2:58
+StorageLive(_6);                 // scope 3 at &lt;println macros&gt;:3:18: 3:43
+&lt;/pre&gt;
+
+
+&lt;p&gt;I realized the line numbers would likely cause problems comparing one MIR file
+to another, so I removed all of the comments using sed:&lt;/p&gt;
+
+&lt;pre&gt;
+$ rustc if-let.rs --emit mir
+$ cat if-let.mir | sed -e 's/\/\/.*$//' &gt; if-let.mir.nocomments
+&lt;/pre&gt;
+
+
+&lt;p&gt;This generates a new text file called if-let.mir.nocomments, which contains the
+same content as if-let.mir, but with no comments. And this command processes
+the match.rs file in the same way:&lt;/p&gt;
+
+&lt;pre&gt;
+$ rustc match.rs --emit mir
+$ cat match.mir | sed -e 's/\/\/.*$//' &gt; match.mir.nocomments
+&lt;/pre&gt;
+
+
+&lt;h2&gt;Comparing MIR Files&lt;/h2&gt;
+
+&lt;p&gt;Now I ran a simple diff command on the simplified MIR text files. If the
+compiler considers &lt;span class="code"&gt;if let&lt;/span&gt; to be exactly the same as
+&lt;span class="code"&gt;match&lt;/span&gt; then there should be no difference, then the
+output of diff should be empty.&lt;/p&gt;
+
+&lt;p&gt;But running diff I saw:&lt;/p&gt;
+
+&lt;pre&gt;
+$ diff if-let.mir.nocomments match.mir.nocomments
+19c19
+&lt;         switchInt(_3) -&gt; [1isize: bb2, otherwise: bb1];
+---
+&gt;         switchInt(_3) -&gt; [0isize: bb1, otherwise: bb2];
+&lt;/pre&gt;
+
+
+&lt;p&gt;My two MIR files are &lt;em&gt;almost&lt;/em&gt; identical; the MIR text Rust generates for &lt;span
+class="code"&gt;if let&lt;/span&gt; is exactly the same as the MIR text Rust generates
+for &lt;span class="code"&gt;match&lt;/span&gt;, except for line 19. I’ve &lt;em&gt;almost&lt;/em&gt; proven
+the hypothesis that &lt;span class="code"&gt;if let&lt;/span&gt; is syntactic sugar for
+&lt;span class="code"&gt;match&lt;/span&gt;, but not quite.&lt;/p&gt;
+
+&lt;p&gt;Let’s take a close look at the MIR code around line 19 and try to understand
+what it means. Here’s a portion of if-let.mir.nocomments, produced by the Rust
+compiler from my &lt;span class="code"&gt;if let&lt;/span&gt; code above:&lt;/p&gt;
+
+&lt;pre&gt;
+bb0: {
+    StorageLive(_1);
+    _1 = std::option::Option&lt;u8&gt;::Some(const 3u8,);
+    _3 = discriminant(_1);
+    switchInt(_3) -&gt; [1isize: bb2, otherwise: bb1];
+}
+
+bb1: {
+    _0 = ();
+    goto -&gt; bb3;
+}
+
+bb2: {
+    StorageLive(_2);
+    _2 = ((_1 as Some).0: u8);
+    _0 = ();
+    goto -&gt; bb3;
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;I don’t understand MIR syntax, but it’s not hard to guess what’s going on. Each
+of these “bb” blocks of code &lt;span class="code"&gt;{ … }&lt;/span&gt; probably
+represents a logical piece of my program.&lt;/p&gt;
+
+&lt;p&gt;The first block, &lt;span class="code"&gt;bb0&lt;/span&gt;, seems to assign the value &lt;span class="code"&gt;Some(3)&lt;/span&gt; to _1, and then calls
+&lt;span class="code"&gt;discriminant(_1)&lt;/span&gt; and saves the “discriminant,” whatever that is, in _3.
+Finally, it tests whether the discriminant is 1. If the discriminant is 1 it
+jumps to &lt;span class="code"&gt;bb2&lt;/span&gt;, or otherwise to &lt;span
+class="code"&gt;bb1&lt;/span&gt;. So &lt;span class="code"&gt;bb0&lt;/span&gt; likely represents the
+&lt;span class="code"&gt;if&lt;/span&gt; portion of my &lt;span class="code"&gt;if let&lt;/span&gt;
+snippet, testing a condition:&lt;/p&gt;
+
+&lt;pre&gt;
+if let Some(i) = some_u8_value
+&lt;/pre&gt;
+
+
+&lt;p&gt;The &lt;span class="code"&gt;bb1&lt;/span&gt; block saves &lt;span class="code"&gt;()&lt;/span&gt; in &lt;span
+class="code"&gt;_0&lt;/span&gt; and jumps to &lt;span class="code"&gt;bb3&lt;/span&gt;. This likely represents the
+missing/default else clause of my &lt;span class="code"&gt;if let&lt;/span&gt; statement.&lt;/p&gt;
+
+&lt;p&gt;And the &lt;span class="code"&gt;bb2&lt;/span&gt; block saves 3, the unwrapped value inside of &lt;span class="code"&gt;Some(3)&lt;/span&gt;, in &lt;span class="code"&gt;_2&lt;/span&gt; and
+jumps to &lt;span class="code"&gt;bb3&lt;/span&gt;. Probably &lt;span class="code"&gt;_2&lt;/span&gt; is the variable &lt;span class="code"&gt;i&lt;/span&gt;, and this block of MIR text
+represents the &lt;span class="code"&gt;let&lt;/span&gt; portion of my &lt;span
+class="code"&gt;if let&lt;/span&gt; snippet:&lt;/p&gt;
+
+&lt;pre&gt;
+let Some(i) = some_u8_value
+let _ = i;
+&lt;/pre&gt;
+
+
+&lt;p&gt;Now let’s take a look at the &lt;span class="code"&gt;match&lt;/span&gt; version, the contents of
+match.mir.nocomments. It’s entirely the same, except for the &lt;span class="code"&gt;switchInt&lt;/span&gt; line:&lt;/p&gt;
+
+&lt;pre&gt;
+bb0: {
+    StorageLive(_1);
+    _1 = std::option::Option&lt;u8&gt;::Some(const 3u8,);
+    _3 = discriminant(_1);
+    &lt;b&gt;switchInt(_3) -&gt; [0isize: bb1, otherwise: bb2];&lt;/b&gt;
+}
+&lt;/pre&gt;
+
+
+&lt;p&gt;Reading this carefully, I saw that actually it does mean the same thing: If the
+discriminant is 0, Rust calls the &lt;span class="code"&gt;bb1&lt;/span&gt; block, or
+otherwise the &lt;span class="code"&gt;bb2&lt;/span&gt; block.&lt;/p&gt;
+
+&lt;p&gt;So, summarizing, the &lt;span class="code"&gt;if let&lt;/span&gt; snippet ran this
+pseudo-code:&lt;/p&gt;
+
+&lt;blockquote&gt;
+If the discriminant is 1, call bb1, else bb2.
+&lt;/blockquote&gt;
+
+
+&lt;p&gt;…and the &lt;span class="code"&gt;match&lt;/span&gt; snippet ran this pseudo-code:&lt;/p&gt;
+
+&lt;blockquote&gt;
+If the discriminant is 0, call bb2, else bb1.
+&lt;/blockquote&gt;
+
+
+&lt;p&gt;So, in fact, the two versions use the same logic, assuming the value of
+discriminant is either 0 or 1. If discriminant = 0, Rust assumes the comparison
+was true and executes the match clause; if discriminant = 1, Rust executes the
+else clause.&lt;/p&gt;
+
+&lt;p&gt;Clearly the discriminant function is crucial &amp;ndash; when I have time next, I’ll
+explore what discriminant means, where it’s implemented and how it works. Or if
+anyone from the Rust teams happens to read this, let us know.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Looking Inside Postgres at a GiST Index</title>
+    <link href="http://patshaughnessy.net/2017/12/15/looking-inside-postgres-at-a-gist-index" rel="alternate"/>
+    <id>http://patshaughnessy.net/2017/12/15/looking-inside-postgres-at-a-gist-index</id>
+    <published>2017-12-15T04:00:00Z</published>
+    <updated>2017-12-15T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/15/tree5.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt; What do Postgres GiST indexes look like? How are&lt;br/&gt;
+  they similar or different from standard Postgres indexes?&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;In the last few posts in this series
+(&lt;a href="http://patshaughnessy.net/2017/12/11/trying-to-repres</summary>
+    <content type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/15/tree5.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt; What do Postgres GiST indexes look like? How are&lt;br/&gt;
+  they similar or different from standard Postgres indexes?&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;In the last few posts in this series
+(&lt;a href="http://patshaughnessy.net/2017/12/11/trying-to-represent-a-tree-structure-using-postgres"&gt;one&lt;/a&gt;,
+&lt;a href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension"&gt;two&lt;/a&gt;,
+&lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;three&lt;/a&gt;
+and
+&lt;a href="http://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension"&gt;four&lt;/a&gt;)
+I showed you how to save hierarchical data in a flat database table using the
+Postgres &lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE
+extension&lt;/a&gt;. I
+explained that you represent tree nodes using path strings and how to search
+your tree data using special SQL operators LTREE provides.&lt;/p&gt;
+
+&lt;p&gt;But the real value of LTREE isn’t the operators and functions it gives you &amp;ndash;
+internally these boil down to fairly simple string operations. Instead, what
+makes LTREE useful is that it integrates these new operators with Postgres’s
+indexing code, which allows you to search for and find matching tree paths
+&lt;em&gt;quickly&lt;/em&gt;. To achieve this, LTREE takes advantage of the &lt;a href="http://gist.cs.berkeley.edu"&gt;Generalized Search Tree
+(GiST) project&lt;/a&gt;, an API that allows C developers
+to extend Postgres’s indexing system.&lt;/p&gt;
+
+&lt;p&gt;But what does the GiST API do? And what does it mean to extend Postgres’s
+indexing system, exactly? Read on to find out!&lt;/p&gt;
+
+&lt;h2&gt;Searching Without an Index&lt;/h2&gt;
+
+&lt;p&gt;Here again is the tree table I used as an example in the earlier posts in this
+series:&lt;/p&gt;
+
+&lt;pre&gt;
+create table tree(
+    id serial primary key,
+    letter char,
+    path ltree
+);
+&lt;/pre&gt;
+
+
+&lt;p&gt;Note the path column uses the custom &lt;span class="code"&gt;ltree&lt;/span&gt; data type
+the LTREE extension provides. If you missed the previous posts, &lt;span
+class="code"&gt;ltree&lt;/span&gt; columns represent hierarchical data by joining
+strings together with periods, e.g.  “A.B.C.D” or “Europe.Estonia.Tallinn.”&lt;/p&gt;
+
+&lt;p&gt;Earlier, I used a simple tree with only 7 nodes as an example. SQL operations
+on a small table like this will always be fast. Today I’d like to imagine a
+much larger tree to explore the benefits indexes can provide; suppose instead I
+have a tree containing hundreds or thousands of records in the &lt;span
+class="code"&gt;path&lt;/span&gt; column:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/table.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Now suppose I search for a single tree node using a select statement:&lt;/p&gt;
+
+&lt;pre&gt;
+select letter from tree where path = 'A.B.T.V'
+&lt;/pre&gt;
+
+
+&lt;p&gt;Without an index on this table, Postgres has to resort to a &lt;em&gt;sequence scan&lt;/em&gt;,
+which is a technical way of saying that Postgres has to iterate over all of the
+records in the table:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/table2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;For each and every record in the table, Postgres executes a comparison &lt;span
+class="code"&gt;p == q&lt;/span&gt; where &lt;span class="code"&gt;p&lt;/span&gt; is the value of
+the path column for each record in the table, and &lt;span class="code"&gt;q&lt;/span&gt;
+is the query, or the value I’m searching for, &lt;span class="code"&gt;A.B.V.T&lt;/span&gt;
+in this example. This loop can be very slow if there are many records. Postgres
+has to check all of them, because they can appear in any order and there’s no
+way to know how many matches there might be in the data ahead of time.&lt;/p&gt;
+
+&lt;h2&gt;Searching With a B-Tree Index&lt;/h2&gt;
+
+&lt;p&gt;Of course, there’s a simple solution to this problem; I just need to create an
+index on the path column:&lt;/p&gt;
+
+&lt;pre&gt;
+create index tree_path_idx on tree (path);
+&lt;/pre&gt;
+
+
+&lt;p&gt;As you probably know, executing a search using an index is much faster. If you
+see a performance problem with a SQL statement in your application, the first
+thing you should check for is a missing index. But why? Why does creating an
+index speed up searches, exactly? The reason is that an index is a sorted copy
+of the target column’s data:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/index1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;By sorting the values ahead of time, Postgres can search through them much more
+quickly. It uses a binary search algorithm:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/index2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Postgres starts by checking the value in the middle of the index. If the stored
+value (&lt;span class="code"&gt;p&lt;/span&gt;) is too large and is greater than the query
+(&lt;span class="code"&gt;q&lt;/span&gt;), if &lt;span class="code"&gt;p &gt; q&lt;/span&gt;, it moves up
+and checks the value at the 25% position. If the value is too small, if &lt;span
+class="code"&gt;p &amp;lt; q&lt;/span&gt;, it moves down and checks the value at the 75%
+position. Repeatedly dividing the index into smaller and smaller pieces,
+Postgres only needs to search a few times before it finds the matching record
+or records.&lt;/p&gt;
+
+&lt;p&gt;However, for large tables with thousands or millions of rows Postgres can’t
+save all of the sorted data values in a single memory segment. Instead,
+Postgres indexes (and indexes inside of any relational database system) save
+values in a &lt;em&gt;binary or balanced tree&lt;/em&gt; (B-Tree):&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/index3.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Now my values are saved in a series of different memory segments arranged in a
+tree structure. Dividing the index up into pieces allows Postgres to manage
+memory properly while saving possibly millions of values in the index. Note
+this isn’t the tree from my LTREE dataset; B-Trees are internal Postgres data
+structures I don’t have access to. To learn more about the Computer Science
+behind this read my 2014 article &lt;a href="http://patshaughnessy.net/2014/11/11/discovering-the-computer-science-behind-postgres-indexes"&gt;Discovering the Computer Science Behind
+Postgres
+Indexes&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Now Postgres uses repeated binary searches, one for each memory segment in the
+B-Tree, to find a value:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/index4.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Each value in the parent or root segment is really a pointer to a child
+segment. Postgres first searches the root segment using a binary search to find
+the right pointer, and then jumps down to the child segment to find the actual
+matching records using another binary search. The algorithm is recursive: The
+B-Tree could contain many levels in which case the child segments would contain
+pointers to grandchild segments, etc.&lt;/p&gt;
+
+&lt;h2&gt;What’s the Problem with Standard Postgres Indexes?&lt;/h2&gt;
+
+&lt;p&gt;But there’s a serious problem here I’ve overlooked so far. Postgres’s index
+search code only supports certain operators. Above I was searching using this
+select statement:&lt;/p&gt;
+
+&lt;pre&gt;
+select letter from tree where path = 'A.B.T.V'
+&lt;/pre&gt;
+
+
+&lt;p&gt;I was looking for records that were equal to my query: &lt;span class="code"&gt;p ==
+q&lt;/span&gt;. Using a B-Tree index I could also have searched for records greater
+than or less than my query: &lt;span class="code"&gt;p &amp;lt; q&lt;/span&gt; or &lt;span
+class="code"&gt;p &gt; q&lt;/span&gt;.&lt;/p&gt;
+
+&lt;p&gt;But what if I want to use the custom LTREE &lt;span class="code"&gt;&amp;lt;@&lt;/span&gt;
+(ancestor) operator? What if I want to execute this select statement?&lt;/p&gt;
+
+&lt;pre&gt;
+select letter from tree where path &lt;@ 'A.B.V'
+&lt;/pre&gt;
+
+
+&lt;p&gt;As we saw in the previous posts in this series, this search will return all of
+the LTREE records that appear somewhere on the branch under &lt;span
+class="code"&gt;A.B.V&lt;/span&gt;, that are descendants of the &lt;span
+class="code"&gt;A.B.V&lt;/span&gt; tree node.&lt;/p&gt;
+
+&lt;p&gt;A standard Postgres index doesn’t work here. To execute this search efficiently
+using an index, Postgres needs to execute this comparison as it walks the
+B-Tree: &lt;span class="code"&gt;p &amp;lt;@ q&lt;/span&gt;. But the standard Postgres index
+search code doesn’t support &lt;span class="code"&gt;p &amp;lt;@ q&lt;/span&gt;. Instead, if I
+execute this search Postgres resorts to a slow sequence scan again, even if I
+create an index on the &lt;span class="code"&gt;ltree&lt;/span&gt; column.&lt;/p&gt;
+
+&lt;p&gt;To search tree data efficiently, we need a Postgres index that will perform
+&lt;span class="code"&gt;p &amp;lt;@ q&lt;/span&gt; comparisons equally well as &lt;span
+class="code"&gt;p == q&lt;/span&gt; and &lt;span class="code"&gt;p &amp;lt; q&lt;/span&gt; comparisons. We
+need a GiST index!&lt;/p&gt;
+
+&lt;h2&gt;The Generalized Search Tree (GiST) project&lt;/h2&gt;
+
+&lt;div style="float: right; padding: 8px 0px 0px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/15/berkeley.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;The Generalized Search Tree (GiST) project, like&lt;br/&gt;
+Postgres itself, started at UC Berkeley.&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Almost 20 years ago, an open source project at UC Berkeley solved this precise
+problem. The &lt;a href="http://gist.cs.berkeley.edu"&gt;Generalized Search Tree (GiST)
+project&lt;/a&gt; added an API to Postgres allowing C
+developers to extend the set of data types that can be used in a Postgres
+index.&lt;/p&gt;
+
+&lt;p&gt;Quoting from the project’s web page:&lt;/p&gt;
+
+&lt;blockquote&gt;
+In the beginning there was the B-tree. All database search trees since the
+B-tree have been variations on its theme. Recognizing this, we have developed a
+new kind of index called a Generalized Search Tree (GiST), which provides the
+functionality of all these trees in a single package. The GiST is an extensible
+data structure, which allows users to develop indices over any kind of data,
+supporting any lookup over that data.
+&lt;/blockquote&gt;
+
+
+&lt;p&gt;GiST achieves this by adding an API to Postgres’s index system anyone can implement for their specific data type. GiST implements the general indexing and searching code, but calls out to custom code at four key moments in the indexing process. Quoting from the project’s web page again, here’s a quick explanation of the 4 methods in the GiST API:&lt;/p&gt;
+
+&lt;div style="padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist.png"/&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;GiST indexes use a tree structure similar to the B-Tree we saw above. But
+Postgres doesn’t create the GiST index tree structure by itself; Postgres works
+with implementations of the GiST &lt;span class="code"&gt;Union&lt;/span&gt;, &lt;span
+class="code"&gt;Penalty&lt;/span&gt; and &lt;span class="code"&gt;PickSplit&lt;/span&gt; API
+functions described above. And when you execute a SQL statement that searches
+for a value in a GiST index, Postgres uses the &lt;span
+class="code"&gt;Consistent&lt;/span&gt; function to find the target values.&lt;/p&gt;
+
+&lt;p&gt;The key here is the implementor of the GiST API can decide what type of data to
+index and how to arrange those data values in the GiST tree. Postgres doesn’t
+care what the data values are or how the tree looks. Postgres simply calls
+&lt;span class="code"&gt;Consistent&lt;/span&gt; any time it needs to search for a value
+and lets the GiST API implementor find the value.&lt;/p&gt;
+
+&lt;p&gt;An example would help understand this, and we have an example GiST API
+implementation: The LTREE extension!&lt;/p&gt;
+
+&lt;h2&gt;Implementing the GiST API for Tree Paths&lt;/h2&gt;
+
+&lt;div style="float: right; padding: 8px 0px 20px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/15/moscow-state.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;The LTREE Postgres extension was developed at Moscow State&lt;br/&gt;
+University by Oleg Bartunov and Teodor Sigaev.&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Starting in around 2001, two students at Moscow State University found the API
+from the GiST project and decided to use it to build indexing support for tree
+data. Oleg Bartunov and Teodor Sigaev, in effect, wrote a “Tree Paths
+Consistent” function, a “Tree Path Union” function, etc. The C code that
+implements this API is the LTREE extension. You can find these functions,
+&lt;span class="code"&gt;ltree_consistent&lt;/span&gt; and &lt;span
+class="code"&gt;ltree_union&lt;/span&gt;, among other functions, in a file called
+ltree_gist.c, located in the contrib/ltree directory in the Postgres source
+code. They also implemented the &lt;span class="code"&gt;Penalty&lt;/span&gt;, &lt;span
+class="code"&gt;PickSplit&lt;/span&gt; and various other functions related to the GiST
+algorithm.&lt;/p&gt;
+
+&lt;p&gt;I can use these custom functions on my own data simply by creating a GiST
+index. Returning to my LTREE example, I’ll drop my B-Tree index and create a
+GiST index instead:&lt;/p&gt;
+
+&lt;pre&gt;
+drop index tree_path_idx;
+create index tree_path_idx on tree using gist (path);
+&lt;/pre&gt;
+
+
+&lt;p&gt;Notice the &lt;span class="code"&gt;using gist&lt;/span&gt; keywords in the &lt;span
+class="code"&gt;create index&lt;/span&gt; command. That’s all it takes; Postgres
+automatically finds, loads and uses the &lt;span class="code"&gt;ltree_union&lt;/span&gt;,
+&lt;span class="code"&gt;ltree_picksplit&lt;/span&gt; etc., functions whenever I insert a
+new value into the table. (It will also insert all existing records into the
+index immediately.) Of course, earlier I &lt;a href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension"&gt;installed the LTREE
+extension&lt;/a&gt;
+also.&lt;/p&gt;
+
+&lt;p&gt;Let’s see how this works &amp;ndash; suppose I add a few random tree records to my empty
+tree table after creating the index:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, path) values ('A', 'A.B.G.A');
+insert into tree (letter, path) values ('E', 'A.B.T.E');
+insert into tree (letter, path) values ('M', 'A.B.R.M');
+insert into tree (letter, path) values ('F', 'A.B.E.F');
+insert into tree (letter, path) values ('P', 'A.B.R.P');
+&lt;/pre&gt;
+
+
+&lt;p&gt;To get things started, Postgres will allocate a new memory segment for the GiST
+index and insert my five records:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;If I search now using the ancestor operator:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where path &lt;@ 'A.B.T'
+&lt;/pre&gt;
+
+
+&lt;p&gt;…Postgres will simply iterate over the records in the same order I inserted
+then, and call the &lt;span class="code"&gt;ltree_consistent&lt;/span&gt; function for each
+one. Here again is what the GiST API calls for the Consistent function to do:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/consistent.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;In this case Postgres will compare &lt;span class="code"&gt;p &amp;lt;@ A.B.T&lt;/span&gt; for
+each of these five records:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Because the values of &lt;span class="code"&gt;p&lt;/span&gt;, the tree page keys, are
+simple path strings, &lt;span class="code"&gt;ltree_consistent&lt;/span&gt; directly
+compares them with &lt;/span&gt;A.B.T&lt;/span&gt; and determines immediately whether each
+value is a descendent tree node of &lt;span class="code"&gt;A.B.T&lt;/span&gt; or not.
+Right now the GiST index hasn’t provided much value; Postgres has to iterate
+over all the values, just like a sequence scan.&lt;/p&gt;
+
+&lt;p&gt;Now suppose I start to add more and more records to my table. Postgres can fit
+up to 136 LTREE records into the root GiST memory segment, and index scans
+function the same way as a sequence scan by checking all the values.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist3.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;But if I insert one more record, the 137th record doesn’t fit. At this point
+Postgres has to do something different:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist4.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Now Postgres “splits” the memory segment to make room for more values. It
+creates two new child memory segments and pointers to them from the parent or
+root segment.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist5.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;What does Postgres do next? What does it place into each child segment?
+Postgres leaves this decision to the GiST API, to the LTREE extension, by
+calling the the &lt;span class="code"&gt;ltree_picksplit&lt;/span&gt; function. Here again
+is the API spec for &lt;span class="code"&gt;PickSplit&lt;/span&gt;:&lt;/p&gt;
+
+&lt;div style="padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+&lt;img src="http://patshaughnessy.net/assets/2017/12/15/pick-split.png"/&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;The &lt;span class="code"&gt;ltree_picksplit&lt;/span&gt; function &amp;ndash; the LTREE
+implementation of the GiST API &amp;ndash; sorts the tree paths alphabetically and copies
+each half into one of the two new child segments. Note that GiST indexes don’t
+normally sort their contents; however, GiST indexes created specifically by the
+LTREE extension do because of the way &lt;span class="code"&gt;ltree_picksplit&lt;/span&gt;
+works. We’ll see why it sorts the data in a moment.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist6.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Now Postgres has to decide what to leave in the root segment. To do this, it
+calls the Union GiST API:&lt;/p&gt;
+
+&lt;div style="padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+&lt;img src="http://patshaughnessy.net/assets/2017/12/15/union.png"/&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;In this example, each of the child segments is a set S. And the &lt;span
+class="code"&gt;ltree_union&lt;/span&gt; function has to return a “union” value for each
+child segment that describes somehow what values are present in that segment:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist7.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Oleg and Teodor decided this union value should be a pair of left/right values
+indicating the minimum and maximum tree branches inside of which all of the
+values fit alphabetically. This is why the &lt;span
+class="code"&gt;ltree_picksplit&lt;/span&gt; function sorted the values. For example,
+because the first child segment contains the sorted values from &lt;span
+class="code"&gt;A.B.C.B&lt;/span&gt; through &lt;span class="code"&gt;A.B.M.Z&lt;/span&gt;, the
+left/right union becomes &lt;span class="code"&gt;A&lt;/span&gt; and &lt;span
+class="code"&gt;A.B.M&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist8.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Note &lt;span class="code"&gt;A.B.M&lt;/span&gt; is sufficient here to form a union value
+excluding &lt;span class="code"&gt;A.B.N.X&lt;/span&gt; and all the following values; LTREE
+doesn’t need to save &lt;span class="code"&gt;A.B.M.Z&lt;/span&gt;.&lt;/p&gt;
+
+&lt;p&gt;Similarly, the left/right union for the second child segment becomes &lt;span
+class="code"&gt;A.B.N/A.B.X&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist9.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;This is what a GiST index looks like. Or, what an LTREE GiST index looks like,
+specifically. The power of the GiST API is that anyone can use it to create a
+Postgres index for any type of data. Postgres will always use the same pattern:
+The parent index page contains a set of union values, each of which somehow
+describe the contents of each child index page.&lt;/p&gt;
+
+&lt;p&gt;For LTREE GiST indexes, Postgres saves left/right value pairs to describe the
+union of values that appear in each child index segment. For other types of
+GiST indexes, the union values could be anything. For example, a GiST index
+could store geographical information like latitude/longitude coordinates, or
+colors, or any sort of data at all. What’s important is that each union value
+describe the set of possible values that can appear under a certain branch of
+the index. And like B-Trees, this union value/child page pattern is recursive:
+A GiST index could hold millions of values in a tree with many pages saved in a
+large multi-level tree.&lt;/p&gt;
+
+&lt;h2&gt;Searching a GiST Index&lt;/h2&gt;
+
+&lt;p&gt;After creating this GiST index tree, searching for a value is straightforward.
+Postgres uses the &lt;span class="code"&gt;ltree_consistent&lt;/span&gt; function. As an
+example, let’s repeat the same SQL query from above:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where path &lt;@ 'A.B.T'
+&lt;/pre&gt;
+
+
+&lt;p&gt;To execute this using the GiST index, Postgres iterates over the union values
+in the root memory segment and calls the &lt;span
+class="code"&gt;ltree_consistent&lt;/span&gt; function for each one:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/consistent.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Now Postgres passes each union value to &lt;span
+class="code"&gt;ltree_consistent&lt;/span&gt; to calculate the &lt;span class="code"&gt;p &amp;lt;@
+q&lt;/span&gt; formula. The code inside of &lt;span class="code"&gt;ltree_consistent&lt;/span&gt;
+then returns &amp;ldquo;MAYBE&amp;rdquo; if &lt;span class="code"&gt;q &gt;
+left&lt;/span&gt;, and &lt;span class="code"&gt;q &amp;lt; right&lt;/span&gt;. Otherwise it returns
+&amp;ldquo;NO.&amp;rdquo;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist10.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;In this example you can see &lt;span class="code"&gt;ltree_consistent&lt;/span&gt; finds
+that the query &lt;span class="code"&gt;A.B.T&lt;/span&gt;, or &lt;span class="code"&gt;q&lt;/span&gt;,
+&lt;em&gt;maybe&lt;/em&gt; is located inside the second child memory segment, but not the first one.&lt;/p&gt;
+
+&lt;p&gt;For the first child union structure, &lt;span class="code"&gt;ltree_consistent&lt;/span&gt;
+finds &lt;span class="code"&gt;q &gt; A&lt;/span&gt; true but &lt;span class="code"&gt;q &amp;lt;
+A.B.M&lt;/span&gt; false. Therefore &lt;span
+class="code"&gt;ltree_consistent&lt;/span&gt; knows there can be no matches in the top
+child segment, so it skips down to the second union structure.&lt;/p&gt;
+
+&lt;p&gt;For the second child union structure, &lt;span class="code"&gt;ltree_consistent&lt;/span&gt; finds both &lt;span class="code"&gt;q &gt; A.B.N&lt;/span&gt;
+true and &lt;span class="code"&gt;q &amp;lt; A.B.X&lt;/span&gt; true. Therefore it returns &lt;span
+class="code"&gt;MAYBE&lt;/span&gt;, meaning the search continues in the lower child
+segment:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/gist11.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Note Postgres never had to search the first child segment: The tree structure
+limits the comparisons necessary to just the values that might match &lt;span
+class="code"&gt;p &amp;lt;@ A.B.T&lt;/span&gt;.&lt;/p&gt;
+
+&lt;p&gt;Imagine my table contained a million rows: Searches using the GiST index will
+still be fast because the GiST tree limits the scope of the search. Instead of
+executing &lt;span class="code"&gt;p &amp;lt;@ q&lt;/span&gt; on every one of the million rows,
+Postgres only needs to run &lt;span class="code"&gt;p &amp;lt;@ q&lt;/span&gt; a handful of times,
+on a few union records and on the child segments of the tree that contain
+values that might match.&lt;/p&gt;
+
+&lt;div style="float: right; padding: 8px 0px 20px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/15/sternberg.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;The Sternberg Astronomical Institute
+at Moscow State University&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;h2&gt;Send Them a Postcard&lt;/h2&gt;
+
+&lt;p&gt;Oleg Bartunov and Teodor Sigaev, the authors of the LTREE extension, explain
+its usage and the algorithms I detailed above here on their &lt;a href="http://www.sai.msu.su/~megera/postgres/gist/ltree/"&gt;web
+page&lt;/a&gt;. They included more
+examples of SQL searches on tree data, including some which use the &lt;span
+class="code"&gt;LTREE[]&lt;/span&gt; data type I didn’t have time to cover in these blog
+posts.&lt;/p&gt;
+
+&lt;p&gt;But most importantly, they included this note at the bottom:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/15/postcard.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Do you save tree data in Postgres? Does your app take advantage of the LTREE
+extension? If so, you should send Oleg and Teodor a postcard! I just did.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Manipulating Trees Using SQL and the Postgres LTREE Extension</title>
+    <link href="http://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension" rel="alternate"/>
+    <id>http://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension</id>
+    <published>2017-12-14T04:00:00Z</published>
+    <updated>2017-12-14T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/14/tree4.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;&lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;Yesterday&lt;/a&gt;,
+I used the &lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE&lt;/a&gt;
+extension to save a tree data structure</summary>
+    <content type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/14/tree4.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;&lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;Yesterday&lt;/a&gt;,
+I used the &lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE&lt;/a&gt;
+extension to save a tree data structure in a Postgres table. After saving the
+tree, I used the &lt;span class="code"&gt;@&gt;&lt;/span&gt; or ancestor operator to count the
+number of descendant nodes on a given branch.&lt;/p&gt;
+
+&lt;p&gt;But that’s not all LTREE can do. Today I’ll show you how to delete, move and
+copy branches from one place to another in your tree, using &lt;span
+class="code"&gt;@&gt;&lt;/span&gt; in combination with other LTREE functions. After that,
+in &lt;a href="http://patshaughnessy.net/2017/12/15/looking-inside-postgres-at-a-gist-index"&gt;my last post in this
+series&lt;/a&gt;,
+I’ll look at how LTREE works under the hood, at the Computer Science that makes
+all of this possible.&lt;/p&gt;
+
+&lt;h2&gt;My Example Tree Again&lt;/h2&gt;
+
+&lt;p&gt;Here’s the tree I’ve been working with during the last few blog posts:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/11/example-tree.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;In my last
+post&lt;/a&gt;,
+I saved this tree in my database using a series of insert statements:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, path) values ('A', 'A');
+insert into tree (letter, path) values ('B', 'A.B');
+insert into tree (letter, path) values ('C', 'A.C');
+insert into tree (letter, path) values ('D', 'A.C.D');
+insert into tree (letter, path) values ('E', 'A.C.E');
+insert into tree (letter, path) values ('F', 'A.C.F');
+insert into tree (letter, path) values ('G', 'A.B.G');
+&lt;/pre&gt;
+
+
+&lt;p&gt;And we saw how easy it is to count the number of tree nodes in a given branch
+using the &lt;span class="code"&gt;@&gt;&lt;/span&gt; operator:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where 'A.C' @&gt; path;
+&lt;/pre&gt;
+
+
+&lt;h2&gt;Cutting Off a Branch&lt;/h2&gt;
+
+&lt;p&gt;But suppose I wanted to remove these nodes from the tree entirely; that is,
+suppose I wanted to “cut off this branch” of the tree, so to speak:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/14/cut-branch.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;How can I do this? Simple! I just use a SQL delete statement:&lt;/p&gt;
+
+&lt;pre&gt;
+delete from tree where 'A.C' @&gt; path;
+&lt;/pre&gt;
+
+
+&lt;p&gt;As you can see, I can use &lt;span class="code"&gt;@&gt;&lt;/span&gt; equally well in delete
+statements as in select statements.&lt;/p&gt;
+
+&lt;h2&gt;Replanting a Branch as a New Tree&lt;/h2&gt;
+
+&lt;p&gt;Now suppose I want to keep this branch, and save it as a separate tree in my
+table. That is, I want two trees: the original &lt;span class="code"&gt;A&lt;/span&gt; tree
+and a new tree consisting of the &lt;span class="code"&gt;C&lt;/span&gt; branch “replanted”
+as a new root:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/14/replanting.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Thinking about this for a moment, moving some nodes from one location to
+another in my tree means I’ll need to update their path values somehow in my
+table. That is, I’ll need to use an update statement and not a select or delete
+statement.  But how? Writing an update statement is easy enough, but how do I
+know what the new path of each tree node will be? Let’s take &lt;span
+class="code"&gt;C&lt;/span&gt; as an example. Because &lt;span class="code"&gt;C&lt;/span&gt; will
+become the root node of my new tree, I want to change its path from &lt;span
+class="code"&gt;A.C&lt;/span&gt; to just &lt;span class="code"&gt;C&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = 'C' where path = 'A.C';
+&lt;/pre&gt;
+
+
+&lt;p&gt;And I will want to update &lt;span class="code"&gt;D&lt;/span&gt;, one of &lt;span
+class="code"&gt;C&lt;/span&gt;’s children, in a similar way:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = 'C.D' where path = 'A.C.D';
+&lt;/pre&gt;
+
+
+&lt;p&gt;I could write a separate update statement for each node, just 4 SQL statements
+for my example. But imagine I had 100s or 1000s of nodes in my tree. Updating
+the records one SQL statement at a time would require repeated network
+connections from my application to Postgres, slowing down the overall operation
+tremendously.&lt;/p&gt;
+
+&lt;p&gt;Instead, I need to update the path of &lt;span class="code"&gt;C&lt;/span&gt; and each of
+its descendants all in a single operation. But how can I do this? Two LTREE
+functions, &lt;span class="code"&gt;NLEVEL()&lt;/span&gt; and &lt;span
+class="code"&gt;SUBPATH()&lt;/span&gt;, can help.&lt;/p&gt;
+
+&lt;h2&gt;The NLEVEL Function&lt;/h2&gt;
+
+&lt;p&gt;First, &lt;span class="code"&gt;NLEVEL&lt;/span&gt;. As you might guess, this returns the
+number of levels in a given path string:&lt;/p&gt;
+
+&lt;pre&gt;
+select letter, path, nlevel(path) from tree;
+
+letter | path  | nlevel 
+-------+-------+--------
+A      | A     |      1
+B      | A.B   |      2
+C      | A.C   |      2
+D      | A.C.D |      3
+E      | A.C.E |      3
+F      | A.C.F |      3
+G      | A.B.G |      3
+(7 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;Looking at this, it’s easy to understand what the function returns: For a root
+node like &lt;span class="code"&gt;A&lt;/span&gt;, &lt;span class="code"&gt;NLEVEL&lt;/span&gt; returns
+1. For &lt;span class="code"&gt;A&lt;/span&gt;’s child nodes, &lt;span class="code"&gt;A.B&lt;/span&gt;
+and &lt;span class="code"&gt;A.C&lt;/span&gt;, &lt;span class="code"&gt;NLEVEL&lt;/span&gt; returns 2,
+and for the grandchild nodes it returns 3. It simply counts the number of
+levels in each path string; internally, it parses the path string for period
+characters.&lt;/p&gt;
+
+&lt;p&gt;Before we continue, consider one subtle but important point. Notice that I was
+able to calculate &lt;span class="code"&gt;NLEVEL&lt;/span&gt; on &lt;em&gt;all of the records&lt;/em&gt; in
+the tree table with a single SQL statement! Postgres applied the function to
+all of the matching paths for me. The power of LTREE’s functions is that they
+seamlessly integrate with SQL, harnessing and extending the power of Postgres.&lt;/p&gt;
+
+&lt;h2&gt;The SUBPATH Function&lt;/h2&gt;
+
+&lt;p&gt;LTREE provides another new SQL function that will also help us write a general
+tree path formula: &lt;span class="code"&gt;SUBPATH&lt;/span&gt;. As you might guess, this
+returns a selected substring from a given path. Let’s try running it on my
+example tree:&lt;/p&gt;
+
+&lt;pre&gt;
+select letter, subpath(path, 1) from tree;
+ERROR:  invalid positions
+STATEMENT:  select letter, subpath(path, 1) from tree;
+&lt;/pre&gt;
+
+
+&lt;p&gt;Oops &amp;ndash; I’ve done something wrong here. Calling &lt;span class="code"&gt;SUBPATH(path,
+1)&lt;/span&gt; returns the portion of the path starting with offset 1. Not a
+character offset, but a &lt;em&gt;path offset&lt;/em&gt;. So &lt;span class="code"&gt;SUBPATH(path,
+1)&lt;/span&gt; drops the first level of the path, &lt;span class="code"&gt;A&lt;/span&gt; in my
+tree, and returns the remaining portion of each path starting from the second
+path element. Internally, LTREE parses the periods for me, drops the requested
+number of path levels and removes the extra leading period.&lt;/p&gt;
+
+&lt;p&gt;In the statement above, the error was caused by the root node in the tree:
+&lt;span class="code"&gt;A&lt;/span&gt;.  This path has only one level, and so LTREE
+returns an error in this case.&lt;/p&gt;
+
+&lt;p&gt;Let’s try using &lt;span class="code"&gt;SUBPATH&lt;/span&gt; only on the &lt;span
+class="code"&gt;C&lt;/span&gt; branch, the branch we want to move:&lt;/p&gt;
+
+&lt;pre&gt;
+select letter, subpath(path, 1) from tree where path &lt;@ 'A.C';
+letter | subpath 
+-------+---------
+C      | C
+D      | C.D
+E      | C.E
+F      | C.F
+(4 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;Now I get only four records in the result, one for &lt;span class="code"&gt;C&lt;/span&gt;
+and one for each node that appears under &lt;span class="code"&gt;C&lt;/span&gt;. And you
+can see the &lt;span class="code"&gt;subpath&lt;/span&gt; column contains the portion of
+the path that appears after &lt;span class="code"&gt;A&lt;/span&gt;, for each of these 4
+records.&lt;/p&gt;
+
+&lt;p&gt;And again, notice that I was able to execute the &lt;span
+class="code"&gt;SUBPATH&lt;/span&gt; function on all 4 tree records I wanted to, in a
+single operation. This time, the &lt;span class="code"&gt;SUBPATH&lt;/span&gt; function
+worked in concert with the &lt;span class="code"&gt;&amp;lt;@&lt;/span&gt; operator. LTREE has
+made the SQL language I already know how to use even more powerful.&lt;/p&gt;
+
+&lt;h2&gt;Moving Tree Nodes Using One UPDATE Statement&lt;/h2&gt;
+
+&lt;p&gt;Now let’s return to the question of moving a branch into a new tree. As this
+diagram shows, I want to delete &lt;span class="code"&gt;C&lt;/span&gt; and its children
+from the &lt;span class="code"&gt;A&lt;/span&gt; tree, and move them to a new location:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/14/replanting.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Earlier I considered moving the nodes using a single update statement for each:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = 'C' where path = 'A.C';
+update tree set path = 'C.D' where path = 'A.C.D';
+update tree set path = 'C.E' where path = 'A.C.E';
+update tree set path = 'C.F' where path = 'A.C.F';
+&lt;/pre&gt;
+
+
+&lt;p&gt;Now that I know about &lt;span class="code"&gt;SUBPATH&lt;/span&gt;, it’s easy to write a
+single SQL update statement that will move all 4 nodes in the &lt;span
+class="code"&gt;C&lt;/span&gt; branch in one operation:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = subpath(path, 1) where path &lt;@ 'A.C';
+&lt;/pre&gt;
+
+
+&lt;p&gt;I use &lt;span class="code"&gt;where path &amp;lt;@ &amp;apos;A.C'&lt;/span&gt; to scope the update to the
+&lt;span class="code"&gt;C&lt;/span&gt; branch, and I use &lt;span class="code"&gt;subpath(path,
+1)&lt;/span&gt; to remove the &lt;span class="code"&gt;A&lt;/span&gt; root element from the path
+of &lt;span class="code"&gt;C&lt;/span&gt; and each of its descendants.&lt;/p&gt;
+
+&lt;p&gt;I can generalize this a bit more using the &lt;span class="code"&gt;NLEVEL&lt;/span&gt;
+function also:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = subpath(path, nlevel('A.C')-1) where path &lt;@ 'A.C';
+&lt;/pre&gt;
+
+
+&lt;p&gt;This follows because &lt;span class="code"&gt;nlevel(&amp;apos;A.C') = 2&lt;/span&gt;, and
+therefore, &lt;span class="code"&gt;nlevel(&amp;apos;A.C')-1&lt;/span&gt; returns the same formula
+we had above. Replacing &lt;span class="code"&gt;A.C&lt;/span&gt; with “BRANCH_PATH” I
+arrive at a general formula for “replanting” a branch as a new tree using a
+single SQL statement:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = subpath(path, nlevel(BRANCH_PATH)-1) where path &lt;@ BRANCH_PATH
+&lt;/pre&gt;
+
+
+&lt;p&gt;…assuming &lt;span class="code"&gt;nlevel(BRANCH_PATH) &gt; 1&lt;/span&gt;, that is assuming
+the branch we want to replant isn’t already a root.&lt;/p&gt;
+
+&lt;h2&gt;The || Concatenation Operator&lt;/h2&gt;
+
+&lt;p&gt;This seems somewhat useful, but what if I want to move a branch from one
+location in my tree to some other location, not necessary to the root? This is
+a more general problem. For example, suppose I want to move the &lt;span
+class="code"&gt;C&lt;/span&gt; branch under &lt;span class="code"&gt;G&lt;/span&gt;, like this:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/14/moving.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;To write a formula for this transformation using SQL, we need to use one more
+important LTREE operator: the &lt;span class="code"&gt;||&lt;/span&gt; or concatenation
+operator. Let’s try it out with an example first:&lt;/p&gt;
+
+&lt;pre&gt;
+select 'A.B.G' || path as concatenated from tree;
+concatenated 
+--------------
+A.B.G.A
+A.B.G.A.B
+A.B.G.A.C
+A.B.G.A.C.D
+A.B.G.A.C.E
+A.B.G.A.C.F
+A.B.G.A.B.G
+(7 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;You can see LTREE has automatically added &lt;span class="code"&gt;A.B.G&lt;/span&gt; along
+with a period separator to each path in my table. And it has done this for all
+the paths in my table in a single operation.&lt;/p&gt;
+
+&lt;h2&gt;Moving a Branch&lt;/h2&gt;
+
+&lt;p&gt;Now using &lt;span class="code"&gt;||&lt;/span&gt; I can write a single SQL statement to
+move a tree branch from one location to another. First, of course, I need to
+scope the SQL operation to the target branch using the ancestor operator:&lt;/p&gt;
+
+&lt;pre&gt;
+select 'A.B.G' || path as concatenated from tree where path &lt;@ 'A.C';
+concatenated 
+---------------
+A.B.G.A.C
+A.B.G.A.C.D
+A.B.G.A.C.E
+A.B.G.A.C.F
+(4 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;I get the same results as above, but now only for the tree nodes I want to
+move.&lt;/p&gt;
+
+&lt;p&gt;But my next problem is the new paths above start with &lt;span
+class="code"&gt;A.B.G.A.C&lt;/span&gt;…. Instead, I want them to be &lt;span
+class="code"&gt;A.B.G.C&lt;/span&gt;…. I need to remove that extra &lt;span
+class="code"&gt;A&lt;/span&gt; character from the new paths, using the &lt;span
+class="code"&gt;SUBPATH&lt;/span&gt; operator:&lt;/p&gt;
+
+&lt;pre&gt;
+select 'A.B.G' || subpath(path, 1) as concatenated from tree where path &lt;@ 'A.C';
+concatenated 
+--------------
+A.B.G.C
+A.B.G.C.D
+A.B.G.C.E
+A.B.G.C.F
+(4 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;And finally, converting this into an update statement:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = 'A.B.G' || subpath(path, 1) where path &lt;@ 'A.C'
+&lt;/pre&gt;
+
+
+&lt;p&gt;…I have the single SQL statement I need!&lt;/p&gt;
+
+&lt;p&gt;And generalizing this, we arrive at a SQL formula you could use in your own
+Postgres database:&lt;/p&gt;
+
+&lt;pre&gt;
+update tree set path = DESTINATION_PATH || subpath(path, nlevel(SOURCE_PATH)-1)
+where path &lt;@ SOURCE_PATH;
+&lt;/pre&gt;
+
+
+&lt;h2&gt;Copying a Branch&lt;/h2&gt;
+
+&lt;p&gt;One last puzzle: How can I copy a tree branch instead of moving it? I just use
+an insert SQL statement instead of update. Simple, right?&lt;/p&gt;
+
+&lt;p&gt;But how, exactly? I need to insert multiple rows, one record for each node in
+the branch I copy. Again, I could write a series of insert statements like
+this:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, path) values ('C', 'A.B.G.C');
+insert into tree (letter, path) values ('D', 'A.B.G.C.D');
+insert into tree (letter, path) values ('E', 'A.B.G.C.E');
+insert into tree (letter, path) values ('F', 'A.B.G.C.F');
+&lt;/pre&gt;
+
+
+&lt;p&gt;But using LTREE functions and operators, I can achieve this using a single SQL
+statement! I just have to write SQL that will insert the result of a select,
+like this:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, path) (
+    select letter, 'A.B.G' || subpath(path, 1) from tree where 'A.C' @&gt; path
+)
+&lt;/pre&gt;
+
+
+&lt;p&gt;Executing this, Postgres will first find all the nodes inside the branch I want
+to copy, and recalculate their paths. Then it will insert that result set into
+the tree as a copy, leaving my original branch unchanged!&lt;/p&gt;
+
+&lt;p&gt;By writing this tree-related logic using LTREE operators in SQL, I ask Postgres
+to do all of the hard work of manipulating and copying the path strings for me.
+I don’t have to write application code to keep track of these strings, and no
+data needs to be transmitted back and forth between my application server and
+the database server.&lt;/p&gt;
+
+&lt;h2&gt;What’s Next? LTREE Internals&lt;/h2&gt;
+
+&lt;p&gt;In my last post about LTREE, I’ll look closely at how it works internally. It’s
+easy enough to imagine how simple functions like &lt;span
+class="code"&gt;NLEVEL&lt;/span&gt;, || or &lt;span class="code"&gt;SUBPATH&lt;/span&gt; work.
+That’s not the interesting part for me. These functions are shorthand for
+fairly simple string operations.&lt;/p&gt;
+
+&lt;p&gt;The special sauce that makes LTREE such a powerful tool is that it integrates
+with Postgres GiST indexes. By using an index, Postgres can execute any of the
+SQL expressions I wrote above equally fast on 7000 records as it would on 7!
+How? The only way to find out is by &lt;a href="http://patshaughnessy.net/2017/12/15/looking-inside-postgres-at-a-gist-index"&gt;Looking Inside Postgres at a GiST
+Index&lt;/a&gt;.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Saving a Tree in Postgres Using LTREE</title>
+    <link href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree" rel="alternate"/>
+    <id>http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree</id>
+    <published>2017-12-13T04:00:00Z</published>
+    <updated>2017-12-13T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/13/tree3.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;In &lt;a href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension"&gt;my last
+post&lt;/a&gt;,
+I showed you how to install and enable a Postgres extension called
+&lt;a href="https://www.postgresql.org/docs/current/stat</summary>
+    <content type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/13/tree3.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;In &lt;a href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension"&gt;my last
+post&lt;/a&gt;,
+I showed you how to install and enable a Postgres extension called
+&lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE&lt;/a&gt;. LTREE
+allows me to save, query on and manipulate trees or hierarchical data
+structures using a relational database table. &lt;a href="http://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension"&gt;As we’ll see&lt;/a&gt;, using LTREE I can
+count leaves, cut off branches, and climb up and down trees easily &amp;ndash; all using
+SQL right inside my application’s existing Postgres database!&lt;/p&gt;
+
+&lt;p&gt;But trees are natural, haphazard, branching structures with countless leaves,
+while database tables are man-made rectangles full of numbers and text. How can
+I possibly save a beautiful tree structure into an ugly, boring database table?&lt;/p&gt;
+
+&lt;h2&gt;Path Enumeration&lt;/h2&gt;
+
+&lt;p&gt;Let’s return to the example tree from the &lt;a href="http://patshaughnessy.net/2017/12/11/trying-to-represent-a-tree-structure-using-postgres"&gt;first
+post&lt;/a&gt;
+in this series:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/11/example-tree.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;The LTREE extension uses the &lt;em&gt;path enumeration&lt;/em&gt; algorithm, which calls for each
+node in the tree to record the path from the root you would have to follow to
+reach that node.&lt;/p&gt;
+
+&lt;p&gt;For example, to find &lt;span class="code"&gt;G&lt;/span&gt; starting from &lt;span
+class="code"&gt;A&lt;/span&gt;, the root, I would move down to &lt;span
+class="code"&gt;B&lt;/span&gt;, and then down again to &lt;span class="code"&gt;G&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/13/tree-path1.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;So the path to &lt;span class="code"&gt;G&lt;/span&gt; is:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/13/path1.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;Here’s another example:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/13/tree-path2.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;This time I’ve traced a path from &lt;span class="code"&gt;A&lt;/span&gt; to &lt;span
+class="code"&gt;D&lt;/span&gt;, via &lt;span class="code"&gt;C&lt;/span&gt;. So the path of &lt;span
+class="code"&gt;D&lt;/span&gt; is:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/13/path2.png"&gt;&lt;/p&gt;
+
+&lt;h2&gt;Saving Tree Paths Using LTREE&lt;/h2&gt;
+
+&lt;p&gt;To use LTREE, I need to create a column to hold these paths. For my example
+tree, I’ll use the same table I did before, but instead of the &lt;span
+class="code"&gt;parent_id&lt;/span&gt; column I’ll use a &lt;span class="code"&gt;path&lt;/span&gt;
+column:&lt;/p&gt;
+
+&lt;pre&gt;
+create table tree(
+    id serial primary key,
+    letter char,
+    path ltree
+);
+create index tree_path_idx on tree using gist (path);
+&lt;/pre&gt;
+
+
+&lt;p&gt;I chose the name &lt;span class="code"&gt;path&lt;/span&gt;; I could have picked any name
+here. However, notice the &lt;span class="code"&gt;path&lt;/span&gt; column uses a Postgres
+data type called &lt;span class="code"&gt;ltree&lt;/span&gt; &amp;ndash; the LTREE extension provides
+this special new type.  And also notice I created a special &lt;span
+class="code"&gt;gist&lt;/span&gt; index on the &lt;span class="code"&gt;path&lt;/span&gt; column;
+more on this later!&lt;/p&gt;
+
+&lt;p&gt;Next, I save the path of each tree node into the &lt;span class="code"&gt;path&lt;/span&gt;
+column, encoded as a series of strings joined together by periods. For example
+to save the path of &lt;span class="code"&gt;G&lt;/span&gt; into my table I use this insert
+statement:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/13/insert1.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;And to save the path to node D I write:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/13/insert2.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;Following this pattern, I can save my entire tree using these insert
+statements, one for each node in my tree:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, path) values ('A', 'A');
+insert into tree (letter, path) values ('B', 'A.B');
+insert into tree (letter, path) values ('C', 'A.C');
+insert into tree (letter, path) values ('D', 'A.C.D');
+insert into tree (letter, path) values ('E', 'A.C.E');
+insert into tree (letter, path) values ('F', 'A.C.F');
+insert into tree (letter, path) values ('G', 'A.B.G');
+&lt;/pre&gt;
+
+
+&lt;p&gt;The root node, &lt;span class="code"&gt;A&lt;/span&gt;, contains the simplest path &lt;span
+class="code"&gt;A&lt;/span&gt;. Its two child nodes, &lt;span class="code"&gt;B&lt;/span&gt; and
+&lt;span class="code"&gt;C&lt;/span&gt;, use paths &lt;span class="code"&gt;A.B&lt;/span&gt; and &lt;span
+class="code"&gt;A.C&lt;/span&gt;; the child nodes under &lt;span class="code"&gt;C&lt;/span&gt; use
+paths &lt;span class="code"&gt;A.C.D&lt;/span&gt;, &lt;span class="code"&gt;A.C.E&lt;/span&gt;, etc.
+You get the idea.&lt;/p&gt;
+
+&lt;h2&gt;The Ancestor Operator: @&gt;&lt;/h2&gt;
+
+&lt;p&gt;Now for the fun part: LTREE provides a series of new SQL operators that allow
+me to query and manipulate tree data structures. The most powerful of these is
+&lt;span class="code"&gt;@&gt;&lt;/span&gt;, the “ancestor” operator. It tests whether one path is an ancestor of
+another.&lt;/p&gt;
+
+&lt;p&gt;Returning to my question from &lt;a href="http://patshaughnessy.net/2017/12/11/trying-to-represent-a-tree-structure-using-postgres"&gt;the first post in this
+series&lt;/a&gt;,
+what if I needed to know how many children &lt;span class="code"&gt;A&lt;/span&gt; had,
+recursively? That is, what if I needed to count its children, grandchildren,
+great-grandchildren, etc.? Earlier we saw that using a &lt;span
+class="code"&gt;parent_id&lt;/span&gt; column this would require an ever increasing
+number of SQL statements:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where parent_id = ID;
+select count(*) from tree where parent_id in (CHILD IDs);
+select count(*) from tree where parent_id in (GRANDCHILD IDs);
+select count(*) from tree where parent_id in (GREAT-GRANDCHILD IDs);
+select count(*) from tree where parent_id in (GREAT_GREAT-GRANDCHILD IDs);
+
+etc.
+&lt;/pre&gt;
+
+
+&lt;p&gt;&lt;span class="code"&gt;@&gt;&lt;/span&gt; solves this problem for us. I can now recursively
+count the total number of nodes under any given parent like this:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where PARENT-PATH @&gt; path;
+&lt;/pre&gt;
+
+
+&lt;p&gt;In my example, this SQL would return the number of nodes, recursively, under
+the root node &lt;span class="code"&gt;A&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where 'A' @&gt; path;
+count 
+-------
+7
+(1 row)
+&lt;/pre&gt;
+
+
+&lt;p&gt;LTREE counts the parent node itself, so the total count is 7, not 6. That is,
+&lt;span class="code"&gt;A @&gt; A&lt;/span&gt; evaluates to true. Another example; this
+returns the count of tree nodes under and including &lt;span class="code"&gt;C&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where ‘A.C' @&gt; path;
+count 
+-------
+4
+(1 row)
+&lt;/pre&gt;
+
+
+&lt;p&gt;Or I could have written these predicates in the opposite order using &lt;span
+class="code"&gt;&amp;lt;@&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where path &lt;@ 'A';
+select count(*) from tree where path &lt;@ 'A.C';
+&lt;/pre&gt;
+
+
+&lt;p&gt;As you can see, the &lt;span class="code"&gt;&amp;lt;@&lt;/span&gt; and &lt;span
+class="code"&gt;@&gt;&lt;/span&gt; operators treat the &lt;span class="code"&gt;path&lt;/span&gt;
+column, the column I defined with the &lt;span class="code"&gt;ltree&lt;/span&gt; data
+type, as simple strings. But there’s some magic going on here: The path values
+are not simple strings. Although I typed them in as strings, &lt;span
+class="code"&gt;&amp;lt;@&lt;/span&gt; and &lt;span class="code"&gt;@&gt;&lt;/span&gt; efficiently determine
+whether or not one path is an ancestor of another.&lt;/p&gt;
+
+&lt;p&gt;And the &lt;span class="code"&gt;@&gt;&lt;/span&gt; ancestor operator is just one way of using
+&lt;span class="code"&gt;ltree&lt;/span&gt; columns; the LTREE extension provides a long list of powerful
+operators and functions!  For a complete list, see
+&lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;https://www.postgresql.org/docs/current/static/ltree.html&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;In &lt;a href="http://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension"&gt;my next post&lt;/a&gt;, I’ll explore more of these functions and show you how to
+perform some tree operations that I’ve found useful.&lt;/p&gt;
+
+&lt;h2&gt;Maybe You’re Not Impressed&lt;/h2&gt;
+
+&lt;p&gt;However, thinking about the path strings for a moment, it’s fairly obvious
+whether one path is an ancestor of another. For example, it’s clear that &lt;span class="code"&gt;A&lt;/span&gt; and
+A.C are ancestors of A.C.D, while A.B is not. In fact, it looks like all the &lt;span class="code"&gt;@&gt;&lt;/span&gt;
+operator does it check whether the string on the left (the ancestor) is a
+prefix or leading substring inside the string on the right (the descendant).&lt;/p&gt;
+
+&lt;p&gt;In fact, you might not be very impressed by LTREE, so far. The &lt;span class="code"&gt;@&gt;&lt;/span&gt; operator
+seems like a fancy way of performing a simple string operation. I could have
+written SQL code to determine that A is an ancestor of A.C.D myself. I probably
+would have used one of Postgres’s &lt;a href="https://www.postgresql.org/docs/current/static/functions-string.html"&gt;many string
+functions&lt;/a&gt;
+to achieve this, maybe something like this:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where strpos(path::varchar, 'A') = 1
+&lt;/pre&gt;
+
+
+&lt;p&gt;Postgres would calculate the answer for my 7-node example tree very quickly.
+But to calculate this count, internally Postgres would have to iterate over all
+the records in my table (this is called a &lt;em&gt;full table scan&lt;/em&gt; or &lt;em&gt;sequence scan&lt;/em&gt; in
+DB jargon) and calculate the &lt;span class="code"&gt;strpos&lt;/span&gt; function on each
+row. If my tree had thousands or millions of rows, then this SQL statement
+would take a long time to finish.&lt;/p&gt;
+
+&lt;h2&gt;Enabling the Real Magic: Using a GiST Index with LTREE&lt;/h2&gt;
+
+&lt;p&gt;The power of the &lt;span class="code"&gt;@&gt;&lt;/span&gt; operator is that it allows
+Postgres to search &lt;em&gt;efficiently&lt;/em&gt; across an entire tree using an index. Saying
+this in a more technical way: The &lt;span class="code"&gt;@&gt;&lt;/span&gt; operator
+integrates with Postgres’s GiST index API to find and match descendant nodes.
+To take advantage of this technology, be sure to create a GiST index on your
+&lt;span class="code"&gt;ltree&lt;/span&gt; column, for example like this:&lt;/p&gt;
+
+&lt;pre&gt;
+create index tree_path_idx on tree using gist (path);
+&lt;/pre&gt;
+
+
+&lt;p&gt;What is a “GiST” index? How does it help LTREE find and count tree nodes
+efficiently? Read the &lt;a href="http://patshaughnessy.net/2017/12/15/looking-inside-postgres-at-a-gist-index"&gt;last post in this
+series&lt;/a&gt;
+to find out. There I describe the Generalized Search Index (GiST) project,
+explore the Computer Science behind GiST and look at how LTREE uses GiST to
+make fast tree operations inside of Postgres possible.&lt;/p&gt;
+
+&lt;h2&gt;What’s Next?&lt;/h2&gt;
+
+&lt;p&gt;But before we dive into LTREE’s internal implementation, first we should see
+what else LTREE can do. So far I’ve shown you how to count descendant tree
+nodes. Tomorrow in my next post, &lt;a href="http://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension"&gt;Manipulating Trees Using SQL and the Postgres
+LTREE
+Extension&lt;/a&gt;,
+I’ll show you how to use other LTREE’s operators and functions to work with
+tree data.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Installing the Postgres LTREE Extension</title>
+    <link href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension" rel="alternate"/>
+    <id>http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension</id>
+    <published>2017-12-12T04:00:00Z</published>
+    <updated>2017-12-12T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/12/tree2.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Hidden inside of your Postgres server is code that provides special SQL
+operators and functions designed to support tree operations. It’s called the
+&lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE exten</summary>
+    <content type="html">&lt;div style="float: right; padding: 8px 0px 40px 30px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/12/tree2.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Hidden inside of your Postgres server is code that provides special SQL
+operators and functions designed to support tree operations. It’s called the
+&lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE extension&lt;/a&gt;.
+I’m guessing this stands for &lt;em&gt;left-tree&lt;/em&gt;. In &lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;my next
+post&lt;/a&gt;, I’ll
+write about some of these functions and operators: what they do and how to use
+them.&lt;/p&gt;
+
+&lt;p&gt;But first, where is the LTREE extension? How can you install and start using it? Read on to
+find out.&lt;/p&gt;
+
+&lt;h2&gt;Testing Whether the LTREE Extension is Installed&lt;/h2&gt;
+
+&lt;p&gt;Depending on where you downloaded Postgres from and how you installed it, you
+may have already installed LTREE with Postgres. To find out, execute this SQL
+statement:&lt;/p&gt;
+
+&lt;pre&gt;
+=&gt; create extension ltree;
+CREATE EXTENSION
+&lt;/pre&gt;
+
+
+&lt;p&gt;If you see the “CREATE EXTENSION” message like this, then you’re all set! LTREE
+was already installed and you just enabled it. Skip to my next post to find out
+what it can do and how to use it.&lt;/p&gt;
+
+&lt;p&gt;Or if you see:&lt;/p&gt;
+
+&lt;pre&gt;
+=&gt; create extension ltree;
+ERROR:  extension "ltree" already exists
+&lt;/pre&gt;
+
+
+&lt;p&gt;…then your Postgres server already had LTREE enabled.&lt;/p&gt;
+
+&lt;p&gt;FYI The &lt;span class="code"&gt;pg_available_extensions&lt;/span&gt; table will show you
+all the Postgres extensions that are available and installed in your server:&lt;/p&gt;
+
+&lt;pre&gt;
+select * from pg_available_extensions;
+
+  name   | default_version | installed_version |                     comment
+---------+-----------------+-------------------+-------------------------------------------------
+ ltree   | 1.1             | 1.1               | data type for hierarchical tree-like structures
+ plpgsql | 1.0             | 1.0               | PL/pgSQL procedural language
+(2 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;As you can see, “ltree” already appears in my server’s list. The value “1.1”
+for &lt;span class="code"&gt;installed_version&lt;/span&gt; indicates that I’ve already
+enabled it too. This would have been blank before running the &lt;span
+class="code"&gt;create extension ltree&lt;/span&gt; command above.&lt;/p&gt;
+
+&lt;p&gt;I originally installed a local copy of Postgres on my Mac using Homebrew, and I
+was happy to find that the Homebrew Postgres formula does include steps to
+build and install LTREE, after building the rest of the Postgres server. But I
+still needed to enable it using &lt;span class="code"&gt;create extension&lt;/span&gt;.&lt;/p&gt;
+
+&lt;h2&gt;Using LTREE on a Shared Postgres Server&lt;/h2&gt;
+
+&lt;p&gt;Running the &lt;span class="code"&gt;create extension ltree&lt;/span&gt; command may fail
+with this error message:&lt;/p&gt;
+
+&lt;pre&gt;
+=&gt; create extension ltree;
+ERROR:  permission denied to create extension "ltree"
+HINT:  Must be superuser to create this extension.
+&lt;/pre&gt;
+
+
+&lt;p&gt;Enabling Postgres extensions requires super user access. If you’re using a
+shared Postgres server and don’t have super-user access, you’ll need to find
+someone who does. Or you may just need to login to Postgres using the proper
+Postgres user account.&lt;/p&gt;
+
+&lt;h2&gt;How to Install the LTREE Extension&lt;/h2&gt;
+
+&lt;p&gt;Running the &lt;span class="code"&gt;create extension&lt;/span&gt; command may also fail
+with this error message:&lt;/p&gt;
+
+&lt;pre&gt;
+=&gt; create extension ltree;
+ERROR:  could not open extension control file "/usr/local/pgsql/share/extension/ltree.control": No such file or directory
+&lt;/pre&gt;
+
+
+&lt;p&gt;This error means the LTREE code isn’t even installed on your Postgres server.
+If you’re running on Linux and installed Postgres using a package manager, you
+may have to install a second package called “postgresql-contrib.”&lt;/p&gt;
+
+&lt;p&gt;If you installed Postgres from source yourself, then you will see this error
+message because the Postgres Makefile doesn’t compile and install LTREE by
+default. Don’t worry! It turns out the Postgres source tree already contains
+the code for LTREE and many other extensions in a subdirectory called
+“contrib.”&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/12/ltree-source.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;Compile it as follows:&lt;/p&gt;
+
+&lt;pre&gt;
+$ cd /path/to/postgres-9.6.5/contrib/ltree
+$ make
+
+gcc -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -Wno-unused-command-line-argument -O2  -DLOWER_NODE -I. -I. -I../../src/include   -c -o ltree_io.o ltree_io.c
+
+etc…
+
+$ sudo make install
+
+/bin/sh ../../config/install-sh -c -d '/usr/local/pgsql/lib'
+/bin/sh ../../config/install-sh -c -d '/usr/local/pgsql/share/extension'
+/bin/sh ../../config/install-sh -c -d '/usr/local/pgsql/share/extension'
+/usr/bin/install -c -m 755  ltree.so '/usr/local/pgsql/lib/ltree.so'
+/usr/bin/install -c -m 644 ./ltree.control '/usr/local/pgsql/share/extension/'
+/usr/bin/install -c -m 644 ./ltree--1.1.sql ./ltree--1.0--1.1.sql ./ltree--unpackaged--1.0.sql  ‘/usr/local/pgsql/share/extension/'
+&lt;/pre&gt;
+
+
+&lt;p&gt;You can see above the install step copied the ltree.so library into my Postgres
+server’s lib directory: /usr/local/pgsql/lib, and ran a couple other commands
+as well. Now I can run the &lt;span class="code"&gt;create extension ltree&lt;/span&gt;
+command as shown above. I don’t even need to restart Postgres; it will find and
+load ltree.so automatically.&lt;/p&gt;
+
+&lt;p&gt;Now that you have LTREE installed and enabled, you can read &lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;my next
+post&lt;/a&gt;, I’ll
+to learn how to use it.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Trying to Represent a Tree Structure Using Postgres</title>
+    <link href="http://patshaughnessy.net/2017/12/11/trying-to-represent-a-tree-structure-using-postgres" rel="alternate"/>
+    <id>http://patshaughnessy.net/2017/12/11/trying-to-represent-a-tree-structure-using-postgres</id>
+    <published>2017-12-11T04:00:00Z</published>
+    <updated>2017-12-11T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/11/tree1.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Suppose you had a hierarchical data structure in your application &amp;ndash; how would
+you save it in a database? How would you represent a complex tree structure
+using flat rows and columns?&lt;/p&gt;
+
+&lt;p&gt;There are a few different, equal</summary>
+    <content type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/12/11/tree1.jpg"&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Suppose you had a hierarchical data structure in your application &amp;ndash; how would
+you save it in a database? How would you represent a complex tree structure
+using flat rows and columns?&lt;/p&gt;
+
+&lt;p&gt;There are a few different, equally valid options. In this series of blog posts,
+I’ll take a close look at one option that Postgres provides, the &lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE extension&lt;/a&gt;. If you
+install and enable LTREE on your Postgres server, it will add powerful SQL
+operators and functions that support tree operations.&lt;/p&gt;
+
+&lt;p&gt;But what are these new SQL operators, and how do you use them? And how does
+LTREE actually work? What Computer Science does it use behind the scenes to
+enable fast tree operations?&lt;/p&gt;
+
+&lt;p&gt;This week I’ll publish a series
+(&lt;a href="http://patshaughnessy.net/2017/12/11/trying-to-represent-a-tree-structure-using-postgres"&gt;one&lt;/a&gt;,
+&lt;a href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension"&gt;two&lt;/a&gt;,
+&lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;three&lt;/a&gt;,
+&lt;a href="http://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension"&gt;four&lt;/a&gt;
+and
+&lt;a href="http://patshaughnessy.net/2017/12/15/looking-inside-postgres-at-a-gist-index"&gt;five&lt;/a&gt;)
+of blog posts on the Postgres LTREE extension.  I&amp;rsquo;ll get started today by
+trying to insert a tree structure into a Postgres table using standard SQL, and
+during the rest of the week I&amp;rsquo;ll take a close look at LTREE: &lt;a href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension"&gt;how to install
+it&lt;/a&gt;,
+&lt;a href="http://patshaughnessy.net/2017/12/13/saving-a-tree-in-postgres-using-ltree"&gt;how to use
+it&lt;/a&gt;,
+and &lt;a href="http://patshaughnessy.net/2017/12/15/looking-inside-postgres-at-a-gist-index"&gt;how it works&lt;/a&gt;.&lt;/p&gt;
+
+&lt;div style="clear: both"&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;An Example Tree&lt;/h2&gt;
+
+&lt;p&gt;My actual data set was more complicated, of course, but for the sake of example
+let’s suppose I needed to save this tree in a Postgres table:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/12/11/example-tree.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;There are many different tree-like data structures in Computer Science, but
+this is probably the simplest: no cycles, no ordering of child nodes, and all
+the child nodes are accessible moving down from a single root. Should be easy,
+right?&lt;/p&gt;
+
+&lt;p&gt;At first, I thought it would be. I started by creating a table with a
+&lt;span class="code"&gt;parent_id&lt;/span&gt; foreign key column, like this:&lt;/p&gt;
+
+&lt;pre&gt;
+create table tree(
+    id serial primary key,
+    letter char,
+    parent_id integer references tree (id)
+);
+&lt;/pre&gt;
+
+
+&lt;p&gt;The idea was that each row in my table represented a single node or element of
+the tree, and would identify its parent using the &lt;span class="code"&gt;parent_id&lt;/span&gt; column. My single
+root node, &lt;span class="code"&gt;A&lt;/span&gt;, had no parent so I saved it first with
+a &lt;span class="code"&gt;NULL&lt;/span&gt; parent id:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, parent_id) values ('A', null);
+
+select * from tree;
+
+id  | letter | parent_id 
+----+--------+-----------
+1   | A      |          
+(1 row)
+&lt;/pre&gt;
+
+
+&lt;p&gt;And then I inserted each of its child nodes like this:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, parent_id) values ('B', 1);
+insert into tree (letter, parent_id) values ('C', 1);
+
+select * from tree;
+
+id  | letter | parent_id 
+----+--------+-----------
+1   | A      |          
+2   | B      |         1
+3   | C      |         1
+(3 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;Because &lt;span class="code"&gt;A&lt;/span&gt; has &lt;span class="code"&gt;id&lt;/span&gt;=1, I set
+&lt;span class="code"&gt;parent_id&lt;/span&gt;=1 for &lt;span class="code"&gt;B&lt;/span&gt; and
+&lt;span class="code"&gt;C&lt;/span&gt;. This is a simple example of the &lt;em&gt;adjacency list&lt;/em&gt;
+algorithm: each row contains a list of its neighbors or adjacent rows. In this
+case I was only recording each row’s parent. And the table is &lt;em&gt;self-referencing&lt;/em&gt;
+because it contains a foreign key (&lt;span class="code"&gt;parent_id&lt;/span&gt;)
+referencing another column in the same table.&lt;/p&gt;
+
+&lt;p&gt;I continued to fill out my tree structure with a few more insert statements:&lt;/p&gt;
+
+&lt;pre&gt;
+insert into tree (letter, parent_id) values ('D', 3);
+insert into tree (letter, parent_id) values ('E', 3);
+insert into tree (letter, parent_id) values ('F', 3);
+insert into tree (letter, parent_id) values ('G', 2);
+
+select * from tree;
+
+id  | letter | parent_id 
+----+--------+-----------
+1   | A      |          
+2   | B      |         1
+3   | C      |         1
+4   | D      |         3
+5   | E      |         3
+6   | F      |         3
+7   | G      |         2
+(7 rows)
+&lt;/pre&gt;
+
+
+&lt;h2&gt;Did My Postgres Tree Work?&lt;/h2&gt;
+
+&lt;p&gt;At first glance, my data structure worked well. I could easily find the parent
+of &lt;span class="code"&gt;E&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+select parent_id from tree where letter = 'E'
+
+parent_id 
+-----------
+3
+(1 row)
+
+select letter from tree where id = 3
+
+letter 
+--------
+C
+(1 row)
+&lt;/pre&gt;
+
+
+&lt;p&gt;And the children of &lt;span class="code"&gt;C&lt;/span&gt; like this:&lt;/p&gt;
+
+&lt;pre&gt;
+select letter from tree where parent_id = 3
+
+letter 
+--------
+D
+E
+F
+(3 rows)
+&lt;/pre&gt;
+
+
+&lt;h2&gt;Recursive Tree Operations&lt;/h2&gt;
+
+&lt;p&gt;And it was also very easy to count how many children each node had, for example
+this SQL statement returns the number of children under &lt;span class="code"&gt;A&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where parent_id = 1;
+
+count 
+-------
+2
+(1 row)
+&lt;/pre&gt;
+
+
+&lt;p&gt;But what if I needed to know how many children &lt;span class="code"&gt;A&lt;/span&gt; had,
+recursively? That is, what if I needed to count its children, grandchildren,
+great-grandchildren, etc.?&lt;/p&gt;
+
+&lt;p&gt;Well, first I would have to find the direct children of &lt;span class="code"&gt;A&lt;/span&gt;:&lt;/p&gt;
+
+&lt;pre&gt;
+select id from tree where parent_id = 1;
+
+id 
+----
+2
+3
+(2 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;Then to find the grandchildren I would need to query for the children of the
+children, inserting the id values from the previous statement:&lt;/p&gt;
+
+&lt;pre&gt;
+select id from tree where parent_id in (2, 3);
+
+id 
+----
+4
+5
+6
+7
+(4 rows)
+&lt;/pre&gt;
+
+
+&lt;p&gt;And then I would add the child count with the grandchild count: 2 + 4 = 6.&lt;/p&gt;
+
+&lt;p&gt;My example tree ends here, so I’m done. But this doesn’t scale; suppose my tree
+had 10, 20 or 100 levels in it. I would have to execute repeated select
+statements, stepping down each level of the tree structure under the parent
+node:&lt;/p&gt;
+
+&lt;pre&gt;
+select count(*) from tree where parent_id in (GREAT-GRANDCHILD-IDS);
+select count(*) from tree where parent_id in (GREAT-GREAT-GRANDCHILD-IDS);
+select count(*) from tree where parent_id in (GREAT-GREAT-GREAT-GRANDCHILD-IDS);
+&lt;/pre&gt;
+
+
+&lt;p&gt;etc.&lt;/p&gt;
+
+&lt;p&gt;In other words, I need to execute &lt;em&gt;n&lt;/em&gt;-1 SQL statements, where &lt;em&gt;n&lt;/em&gt; is the number of
+levels in the tree under the parent node, each time inserting all of the ids
+returned by the previous query. And to find the total count I would have to sum
+the number of ids returned by each query along the way. Certainly not an
+efficient algorithm!&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Update:&lt;/strong&gt; As Mengchen Yu pointed out in the comments, I&amp;rsquo;ll need to execute
+one last additional SQL statement that returns an emtpy set of children ids, in
+order to detect my tree has no further levels. So the total number of SQL
+statements would be &lt;em&gt;n&lt;/em&gt;, not &lt;em&gt;n&lt;/em&gt;-1.&lt;/p&gt;
+
+&lt;h2&gt;There must be a better way&lt;/h2&gt;
+
+&lt;p&gt;My &lt;span class="code"&gt;parent_id&lt;/span&gt; foreign key worked well for very simple
+tree operations, but not for more complex tasks, such as recursively counting
+nodes. If I setup my database schema differently, in a more thoughtful and
+complex way, can I avoid the repeated SQL calls?&lt;/p&gt;
+
+&lt;p&gt;Yes! There are a variety of options. One common solution is to use a &lt;a href="https://en.wikipedia.org/wiki/Nested_set_model"&gt;nested set&lt;/a&gt;
+approach. In this design, each row contains a description of the set of other
+nodes that appear under it in the tree by saving the maximum and minimum id
+values of that subset of rows, the “nested set.” Using this scheme, querying
+children and grandchildren recursively becomes very easy. The drawback is that
+I would have to recalculate these values up and down the tree each time a new
+row was added.&lt;/p&gt;
+
+&lt;p&gt;Another solution, &lt;em&gt;path enumeration&lt;/em&gt;, involves using a column to save the path or
+position of each node in the tree. This can be a powerful solution, but
+recursive queries and other tree operations require special support to parse
+and manipulate these paths.&lt;/p&gt;
+
+&lt;p&gt;A completely different approach would be to use a &lt;a href="https://en.wikipedia.org/wiki/Graph_database"&gt;graph-oriented
+database&lt;/a&gt;, such as
+&lt;a href="https://neo4j.com"&gt;Neo4J&lt;/a&gt;. These are database servers designed entirely around
+this problem: saving hierarchical data, or more generally networks of related
+data values.&lt;/p&gt;
+
+&lt;p&gt;But I didn’t want to leave Postgres behind: I already had a working, well
+tested application. Why start over from scratch just because I added a single
+tree structure to my app? Why add new infrastructure and complexity to my
+overall system to support a single new data structure?&lt;/p&gt;
+
+&lt;p&gt;It turns out I didn’t have to: Postgres itself supports one of the two tree
+algorithms I mentioned above: path enumeration. Bundled inside of the Postgres
+source tree is an “extension,” an optional piece of C code you need compile,
+install and enable, that supports tree SQL operations using path enumeration.
+In my &lt;a href="http://patshaughnessy.net/2017/12/12/installing-the-postgres-ltree-extension"&gt;next
+post&lt;/a&gt;,
+I’ll show you how to install and use the &lt;a href="https://www.postgresql.org/docs/current/static/ltree.html"&gt;LTREE Postgres
+extension&lt;/a&gt;.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Pointers in C and x86 Assembly Language</title>
+    <link href="http://patshaughnessy.net/2017/1/20/pointers-in-c-and-x86-assembly-language" rel="alternate"/>
+    <id>http://patshaughnessy.net/2017/1/20/pointers-in-c-and-x86-assembly-language</id>
+    <published>2017-01-20T04:00:00Z</published>
+    <updated>2017-01-20T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/1/20/ram.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;16GB of DDR random access memory&lt;br/&gt;
+  my son used in his new gaming PC
+&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Recently I’ve been trying to learn how to read x86 assembly language. In &lt;a href="http://patshaughnessy.net/2016/11/26/learning-to-read-x86-asse</summary>
+    <content type="html">&lt;div style="float: left; padding: 8px 30px 40px 0px; text-align: center; line-height:18px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2017/1/20/ram.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;16GB of DDR random access memory&lt;br/&gt;
+  my son used in his new gaming PC
+&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Recently I’ve been trying to learn how to read x86 assembly language. In &lt;a href="http://patshaughnessy.net/2016/11/26/learning-to-read-x86-assembly-language"&gt;my
+last
+post&lt;/a&gt;,
+I explored basic x86 syntax in a very simple program that used a few registers.
+But in that post I didn’t cover how instructions refer to values located in
+memory and not in a register. To be useful at all, x86 code must load data from
+memory into a register, and eventually save data from a register back into
+memory.&lt;/p&gt;
+
+&lt;p&gt;Assembly language instructions access values in memory by considering a
+register’s contents to be a memory address, and then dereferencing it the same
+way you would use a pointer in a C program. In fact, to me C and assembly
+language seem very similar in this way, which I suspect is not a coincidence.&lt;/p&gt;
+
+&lt;p&gt;Today I’ll read and try to understand a very simple x86 assembly language
+program that reads from and writes to memory. To make the x86 instructions a
+bit easier to follow, I’ll first rewrite them using C pointer syntax. If you’re
+an experienced C programmer, this will make the x86 code easy to read. Or if
+you’re not familiar with C, this is your chance to learn both C and x86 pointer
+syntax at the same time.&lt;/p&gt;
+
+&lt;h2&gt;Writing A Program That Accesses Memory&lt;/h2&gt;
+
+&lt;p&gt;But first, we need an example program that accesses memory. Where can I find
+one? Do I need to find some low level code from a device driver or operating
+system kernel? No, of course not! Every program you or I have ever written
+accesses memory. All I need to do is translate one of them into x86 assembly
+language.&lt;/p&gt;
+
+&lt;p&gt;I’ll use my Ruby example from last time, but with a new line of code that saves
+the constant value 42 into a local variable. After I compile it I’ll able able
+to look for the number 42 in the assembly language code:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+&lt;span class="keyword"&gt;def&lt;/span&gt; &lt;span class="function"&gt;add_forty_two&lt;/span&gt;(n)
+  a = &lt;span class="integer"&gt;42&lt;/span&gt;
+  n+a 
+&lt;span class="keyword"&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;Once again I’ll use &lt;a href="https://crystal-lang.org"&gt;Crystal&lt;/a&gt; to compile my Ruby code:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+crystal build add_forty_two.rb --emit asm
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;Searching through the generated &lt;code&gt;add_forty_two.s file&lt;/code&gt;, I find the
+&lt;code&gt;add\_forty\_two&lt;/code&gt; function, clean it up and paste its assembly language
+instructions back into my Ruby function:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+&lt;span class="keyword"&gt;def&lt;/span&gt; &lt;span class="function"&gt;add_forty_two&lt;/span&gt;(n)
+
+  pushq   %rbp  
+  movq    %rsp, %rbp
+  movl    %edi, &lt;span class="integer"&gt;-8&lt;/span&gt;(%rbp)
+  movl    &lt;span class="global-variable"&gt;$42&lt;/span&gt;, &lt;span class="integer"&gt;-4&lt;/span&gt;(%rbp)
+  movl    &lt;span class="integer"&gt;-8&lt;/span&gt;(%rbp), %eax
+  addl    &lt;span class="integer"&gt;-4&lt;/span&gt;(%rbp), %eax
+  popq    %rbp  
+  retq  
+
+&lt;span class="keyword"&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;h2&gt;Assembly Language: The Script Your Computer Follows&lt;/h2&gt;
+
+&lt;p&gt;This code is quite literally the script my computer follows: What happens when
+I call &lt;code&gt;add_forty_two&lt;/code&gt;? How does my computer know what to do? How does it add 42
+to the given argument? It follows the script.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/the-tempest.png"&gt;&lt;/p&gt;
+
+&lt;div style="padding: 0px 30px 30px 0px; text-align: center; line-height:18px"&gt;
+  &lt;i&gt;Trying to read x86 assembly language is a bit like&lt;br/&gt;
+trying to read an old Shakespearean manuscript&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;The problem is this script contains Old English words I don’t understand &amp;ndash; and
+the words I do know are spelled differently. I can almost understand what this
+line of code means:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+movl    &lt;span class="global-variable"&gt;$42&lt;/span&gt;, &lt;span class="integer"&gt;-4&lt;/span&gt;(%rbp)
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;…but not quite. I can guess by reading my original Ruby code it’s probably
+saving 42 in the local variable &lt;code&gt;a&lt;/code&gt;. In my last post I learned that the “l”
+suffix in movl means the instruction will move a long, or 32 bit value, from
+one place to another. I also learned last time that the “$” prefix means the
+number 42 is a constant.&lt;/p&gt;
+
+&lt;p&gt;But where is &lt;code&gt;a&lt;/code&gt; located? And what does &lt;code&gt;-4(%rbp)&lt;/code&gt; mean? The surrounding
+instructions are worse; they use similar syntax but there are no clues as to
+what they are doing. Like a frustrated high school student trying to read &lt;em&gt;The
+Tempest&lt;/em&gt;, I’m at a loss.&lt;/p&gt;
+
+&lt;p&gt;I need some cliff notes. I need to see this assembly language script translated
+into standard, modern English, a language I understand.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/the-tempest-cleaned-up.png"&gt;&lt;/p&gt;
+
+&lt;div style="padding: 0px 30px 30px 0px; text-align: center; line-height:18px"&gt;
+  &lt;i&gt;C code is like a modern, cleaned up copy of a Shakespeare&lt;br/&gt;
+play. Equally confusing but somewhat easier to read.&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;h2&gt;Transcribing x86 Assembly Language into C&lt;/h2&gt;
+
+&lt;p&gt;To illustrate what I mean, I’ll rewrite each x86 instruction with the
+equivalent C syntax:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/transcribe.png"&gt;&lt;/p&gt;
+
+&lt;p&gt;If you’re an experienced C programmer, the pseudocode on the right side should
+be somewhat more readable. You can see how the x86 instructions access memory
+by interpreting register values as memory addresses, and how instructions can
+also pre-decrement or post-increment these addresses. We’ve translated
+something completely unfamiliar into a format that is somewhat easier to
+follow.&lt;/p&gt;
+
+&lt;p&gt;If you’re not familiar with C, then skip down to the next section, where I’ll
+explain what three of these instructions do. You’ll learn what the x86 and C
+notation means, how they are different and how they are similar.&lt;/p&gt;
+
+&lt;h2&gt;C: A Mix of High And Low Level Notation&lt;/h2&gt;
+
+&lt;p&gt;But while my C pseudocode is syntactically correct, it makes no sense. Negative
+array indices are normally invalid in C, and, of course, a C program would
+never directly reference registers on the CPU directly like this to begin
+with.&lt;/p&gt;
+
+&lt;p&gt;In fact, a proper C program to add 42 would resemble the Ruby code I started
+with above:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+&lt;span class="preprocessor"&gt;#include&lt;/span&gt; &lt;span class="include"&gt;&amp;lt;stdio.h&amp;gt;&lt;/span&gt;
+
+&lt;span class="predefined-type"&gt;unsigned&lt;/span&gt; &lt;span class="predefined-type"&gt;int&lt;/span&gt; add_forty_two(n)
+{
+  &lt;span class="predefined-type"&gt;unsigned&lt;/span&gt; &lt;span class="predefined-type"&gt;int&lt;/span&gt; a = &lt;span class="integer"&gt;42&lt;/span&gt;; 
+  &lt;span class="keyword"&gt;return&lt;/span&gt; a+n;
+}
+
+printf(&lt;span class="string"&gt;&lt;span class="delimiter"&gt;&amp;quot;&lt;/span&gt;&lt;span class="content"&gt;50 + 42 is %d&lt;/span&gt;&lt;span class="delimiter"&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;, add_forty_two(&lt;span class="integer"&gt;50&lt;/span&gt;));
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;My point today is that C mixes high and low level language notation. The
+underlying features and capabilities of my x86 microprocessor leak through into
+C programming syntax. Writing in C, I can create functions, variables and
+return values like a high level language, but I can also drop down to the level
+my microprocessor operates at, accessing memory directly using pointers.&lt;/p&gt;
+
+&lt;p&gt;And knowing how to use C pointers, I’m one step closer to understanding x86
+assembly language. As we’ll see next, there are a few important differences
+between C and x86 notation which I need to understand carefully. But these are
+superficial. It turns out that simply by learning C I’ve also learned a lot
+about what my computer’s microprocessor is capable of.&lt;/p&gt;
+
+&lt;p&gt;In a future article I’ll try to figure out &lt;em&gt;why&lt;/em&gt; the x86 instructions above do
+what they do &amp;ndash; how my compiler assigns local variables to locations on the
+stack, and what the stack is. But for today, let’s focus on the meaning of the
+x86 and C pointer notation.&lt;/p&gt;
+
+&lt;h2&gt;A Backwards, Inside Out Array&lt;/h2&gt;
+
+&lt;p&gt;Let’s start with the move instruction that copies 42 into a certain memory
+address. Here’s the C translation:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+rbp[&lt;span class="integer"&gt;-1&lt;/span&gt;] = &lt;span class="integer"&gt;42&lt;/span&gt;;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;This line of code looks simple enough, but actually there are a couple of very
+odd things about it. First, I wrote the C array &lt;code&gt;rbp&lt;/code&gt; using the name of a
+register in my microprocessor. That is, I’m treating the &lt;code&gt;rbp&lt;/code&gt; register as if it
+were a series of values, an array, and not a single value.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array1.png" width=432&gt;&lt;/p&gt;
+
+&lt;p&gt;Any C programmers reading along might not be surprised by this:
+In C an array is really just a pointer to a block of memory and not a
+collection of objects or elements like it would be in Python, Ruby or some
+other high level language. A recent blog article featured on Hacker News
+discusses what arrays really are in C: &lt;a href="https://blog.feabhas.com/2016/12/a-convenient-untruth"&gt;A convenient
+untruth&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The pointer itself is a number indicating where the memory block is located: a
+&lt;em&gt;memory address&lt;/em&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array2.png" width=800&gt;&lt;/p&gt;
+
+&lt;p&gt;In x86 assembly language, the same move instruction appears this way:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+movl    &lt;span class="global-variable"&gt;$42&lt;/span&gt;, &lt;span class="integer"&gt;-4&lt;/span&gt;(%rbp)
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;To me, the assembly language syntax is inside out: Instead of writing the array
+name followed by the index in brackets, I write the index first, followed by
+the array name in parentheses:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array3.png" width=432&gt;&lt;/p&gt;
+
+&lt;p&gt;The parentheses indicate the move instruction should consider the value in &lt;code&gt;rbp&lt;/code&gt;
+to be a memory address, that it should move the value 42 to the memory address
+referenced by &lt;code&gt;rbp&lt;/code&gt; (or actually to the memory address four bytes before the
+value of &lt;code&gt;rbp&lt;/code&gt;) and not into &lt;code&gt;rbp&lt;/code&gt; itself.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array4.png" width=432&gt;&lt;/p&gt;
+
+&lt;p&gt;As you can see, the other odd thing about this array is that it uses a negative
+index. The &lt;code&gt;movl&lt;/code&gt; instruction copied 42 to a memory address that appeared before
+the start of the array &amp;ndash; this array is not only inside-out, it’s backwards!&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array5.png" width=558&gt;&lt;/p&gt;
+
+&lt;p&gt;In a C program, this would be a recipe for disaster. C programmers normally
+allocate memory for an array, and then access its elements using a positive (or
+zero) index value. Writing to a memory location using a negative index would
+overwrite memory located outside of the array, potentially causing a
+segmentation fault to occur immediately, or more likely causing my code to
+crash or misbehave later when it accessed this overwritten memory value.&lt;/p&gt;
+
+&lt;h2&gt;x86 Array Indices&lt;/h2&gt;
+
+&lt;p&gt;Reading the code above, you probably also noticed I wrote the C array using an
+index of -1, while the original x86 move instruction used -4. Why are these
+different? Why did I change the index values when I transcribed the assembly
+language into C?&lt;/p&gt;
+
+&lt;p&gt;The reason is that x86 assembly language instructions always use byte counts,
+while C arrays use an element count index instead. To understand what I mean,
+let’s write a C declaration for this imaginary array before using it:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+&lt;span class="predefined-type"&gt;unsigned&lt;/span&gt; &lt;span class="predefined-type"&gt;int&lt;/span&gt; rbp[&lt;span class="integer"&gt;100&lt;/span&gt;];
+rbp[&lt;span class="integer"&gt;2&lt;/span&gt;] = &lt;span class="integer"&gt;42&lt;/span&gt;;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;Because C is a statically typed language, I have to declare the type of the
+array elements when I declare the array. In this example, &lt;code&gt;unsigned int&lt;/code&gt; is
+equivalent to a 32-bit or 4 byte value, the same operand size used by the &lt;code&gt;movl&lt;/code&gt;
+instruction. So here I’ve declared &lt;code&gt;rbp&lt;/code&gt; as an array of 100 ints, using a memory
+segment containing a total of 4*100=400 bytes.&lt;/p&gt;
+
+&lt;p&gt;Now when I write &lt;code&gt;rbp[2]&lt;/code&gt; in C I access the element at position 2, or the third
+element:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array6.png" width=447&gt;&lt;/p&gt;
+
+&lt;p&gt;But notice that because each int element consists of 4 bytes, the memory
+location of &lt;code&gt;rbp+2&lt;/code&gt; is actually 8 bytes larger than &lt;code&gt;rbp&lt;/code&gt;. The index 2 is an
+element count: (2 elements) * (4 bytes/element) = 8 bytes.&lt;/p&gt;
+
+&lt;p&gt;x86 assembly language, on the other hand, uses byte indexes. That means to
+access the same element in this array, I would write &lt;code&gt;8(%rbp)&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array7.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;When you look at memory this way, from a detailed, physical point of view, the
+x86 byte count index makes more sense. &lt;code&gt;8(%rbp)&lt;/code&gt; is the address &lt;code&gt;rbp&lt;/code&gt; points to,
+plus 8 bytes. But this isn’t very convenient: Think of all the code you’ve
+written that uses arrays and their elements. Normally you don’t want to think
+about how many bytes each element uses in memory, and exactly how many bytes
+from the start of the array an element is located at. The C style of using an
+element count index makes much more sense.&lt;/p&gt;
+
+&lt;p&gt;In the backwards array from my example program, the &lt;code&gt;movl&lt;/code&gt; instruction was
+written as:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+movl    &lt;span class="global-variable"&gt;$42&lt;/span&gt;, &lt;span class="integer"&gt;-4&lt;/span&gt;(%rbp)
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;This means “move the 4 byte long value 42 to a memory location 4 bytes before
+the address found in the &lt;code&gt;rbp&lt;/code&gt; register.”&lt;/p&gt;
+
+&lt;p&gt;But in C, I would write&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+rbp[&lt;span class="integer"&gt;-1&lt;/span&gt;] = &lt;span class="integer"&gt;42&lt;/span&gt;;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;This means “Set the -1st element of the array to 42” &amp;ndash; much more
+straightforward (although still a bit weird).&lt;/p&gt;
+
+&lt;h2&gt;Pushing a Value Onto The Stack&lt;/h2&gt;
+
+&lt;p&gt;Next let’s take a look at the first x86 instruction in my program:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+pushq   %rbp  
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;This instruction, &lt;code&gt;pushq&lt;/code&gt;, pushes a new value onto the top of the stack. Think of
+the stack as just a special array of values in memory. Reading the equivalent C
+code makes this a bit easier to follow:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+*--rsp = rbp;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;Here I wrote the C assignment using explicit pointer syntax: The pointer is the
+&lt;code&gt;rsp&lt;/code&gt; or &lt;em&gt;stack pointer&lt;/em&gt; register. The asterisk prefix is C notation for
+dereferencing a pointer: &lt;code&gt;*rsp&lt;/code&gt; refers to the value stored at the memory location
+&lt;code&gt;rsp&lt;/code&gt; points to, just as if I had written &lt;code&gt;rsp[0]&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array8.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;Ignoring the minus signs for a moment, the C code &lt;code&gt;*rsp = rbp&lt;/code&gt; means: “copy the
+value of &lt;code&gt;rbp&lt;/code&gt; to the memory location whose address is contained in the &lt;code&gt;rsp&lt;/code&gt;
+register.”&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array9.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;What about the minus signs? C programmers will know these indicate the pointer,
+in this case &lt;code&gt;rsp&lt;/code&gt;, should be decremented before its value is dereferenced. We
+write the minus signs before the pointer because the decrement operation
+happens before the pointer’s value is used. This is useful in this scenario
+because &lt;code&gt;rsp&lt;/code&gt; will continue to point to the top of the stack.&lt;/p&gt;
+
+&lt;p&gt;Imagine the &lt;code&gt;rsp&lt;/code&gt; pointer starts at &lt;code&gt;0x00007fff5fbff8f8&lt;/code&gt;. This is the top of the
+stack, initially:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array10.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;Then we decrement &lt;code&gt;rsp&lt;/code&gt; so it points to a new top of the stack. The stack grows
+downward in x86 programs. Each time we push a value onto the stack we first
+decrement the stack pointer:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array11.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;And then the assignment writes the value of &lt;code&gt;rbp&lt;/code&gt; to the top of the stack, using
+&lt;code&gt;rsp&lt;/code&gt; after it has been decremented:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/array12.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;Notice another important detail here: The stack pointer is decremented by 8
+bytes, not 4 bytes as above. This is because the values we push onto the stack
+in this example are pointers, or 8 byte values. We’ll see why in a moment.&lt;/p&gt;
+
+&lt;p&gt;What about the x86 notation? Pushing a value onto the stack is such a common
+operation x86 microprocessors have a special instruction for it: &lt;code&gt;push&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+pushq   %rbp  
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;Just like with &lt;code&gt;movl&lt;/code&gt;, the “q” suffix indicates how large the operand is, the
+size of the value that &lt;code&gt;push&lt;/code&gt; copies to the stack. In this case “q” indicates the
+value is a 64 bit or 8 byte value. That’s why each value on the stack in the
+diagram above takes 8 bytes. If my program had used the &lt;code&gt;pushl&lt;/code&gt; instruction, then
+it would have decremented the stack by only 4 bytes (a “long” instead of a
+“quad” value).&lt;/p&gt;
+
+&lt;p&gt;This behavior of automatically adjusting the amount of decrement according to
+the operand size is a convenient feature of x86 microprocessors. And it’s also
+the origin of the C language &lt;code&gt;--&lt;/code&gt; and &lt;code&gt;++&lt;/code&gt; operators. To see what I mean, take a
+second look at the equivalent C assignment code:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+*--rsp = rbp;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;What does the &lt;code&gt;--&lt;/code&gt; pre-decrement operator subtract from the pointer &lt;code&gt;rsp&lt;/code&gt;? The
+answer is one element. If we imagine I declared &lt;code&gt;rsp&lt;/code&gt; a pointer to an 8 byte long
+value:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+unsigned long *rsp;
+*--rsp = rbp;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;…then decrementing &lt;code&gt;rsp&lt;/code&gt; will subtract 8 bytes, enough for one unsigned long
+value to fit. The &lt;code&gt;--&lt;/code&gt; operator uses the size of the pointer’s referenced type to
+determine what value to subtract. And just like the &lt;code&gt;pushq&lt;/code&gt; x86 instruction, the
+C &lt;code&gt;--&lt;/code&gt; operator subtracts before the assignment occurs.&lt;/p&gt;
+
+&lt;p&gt;Why does the C &lt;code&gt;--&lt;/code&gt; operator function this way? Because the x86 assembly language
+functions in the same way. Because my computer’s microprocessor works that way.
+We’re seeing another example of how C’s behavior reflects the behavior and
+capability of my computer’s microprocessor.&lt;/p&gt;
+
+&lt;h2&gt;Popping a Value Off The Stack&lt;/h2&gt;
+
+&lt;p&gt;Here’s the last instruction in my example program:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+retq  
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;This instruction, &amp;ldquo;return,&amp;rdquo; means the microprocessor should return to the
+calling function and continue execution from there. How does it work? Once
+again, let’s refer to the equivalent C assignment function to learn more:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+rip = *rsp++;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;Here the C code copies the value from the memory location referenced by the &lt;code&gt;rsp&lt;/code&gt;
+pointer and saves it into the &lt;code&gt;rip&lt;/code&gt; register.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/pop1.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;rip&lt;/code&gt; register is known as the &lt;em&gt;instruction pointer&lt;/em&gt;, which contains a very
+special and important value: the memory address of the next instruction my
+microprocessor should execute. This instruction copies an older value of &lt;code&gt;rip&lt;/code&gt;
+from the stack, and saves it into the &lt;code&gt;rip&lt;/code&gt; register again.&lt;/p&gt;
+
+&lt;p&gt;Each time my program calls a function, the assembly language code saves the
+current value of &lt;code&gt;rip&lt;/code&gt; on the stack and then sets &lt;code&gt;rip&lt;/code&gt; to a new value: the
+location of the called function. When that function is finished, my program
+then retrieves the old value of &lt;code&gt;rip&lt;/code&gt; from the stack, continuing execute from
+where it left off at the call site.&lt;/p&gt;
+
+&lt;p&gt;After copying the old value of &lt;code&gt;rip&lt;/code&gt; from the stack, my program has to increment
+the &lt;code&gt;rsp&lt;/code&gt; pointer in order to keep the &lt;code&gt;rsp&lt;/code&gt; register pointing to the top of the
+stack. And in just the same way &lt;code&gt;pushq&lt;/code&gt; did, &lt;code&gt;retq&lt;/code&gt; uses the “q” suffix to
+determine how many bytes to add to the stack pointer after the copy is
+finished.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2017/1/20/pop2.png" width=698&gt;&lt;/p&gt;
+
+&lt;p&gt;Now we know where the C &lt;code&gt;++&lt;/code&gt; post-increment operator’s behavior comes from:
+assembly language. Just as &lt;code&gt;retq&lt;/code&gt; adds 8 bytes to &lt;code&gt;rsp&lt;/code&gt;, the C expression &lt;code&gt;*rsp++&lt;/code&gt;
+adds the size of 1 element to &lt;code&gt;rsp&lt;/code&gt; based on the type of the pointer’s referenced
+type:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+&lt;span class="predefined-type"&gt;unsigned&lt;/span&gt; &lt;span class="predefined-type"&gt;long&lt;/span&gt; *rsp;
+rip = *rsp++;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;h2&gt;Next Time&lt;/h2&gt;
+
+&lt;p&gt;When I have time I&amp;rsquo;d like to write one more post about x86 syntax. Now that
+I’ve learned what register prefixes and instruction suffixes mean in x86 code,
+and how to write instructions that use register values as memory addresses, I’m
+finally ready to read and understand a simple assembly language program. In my
+next point I’ll look at how my Crystal and C compilers assign memory addresses
+on the stack for local variables, and why they use a stack in the first place.
+Should be fun!&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>Learning to Read x86 Assembly Language</title>
+    <link href="http://patshaughnessy.net/2016/11/26/learning-to-read-x86-assembly-language" rel="alternate"/>
+    <id>http://patshaughnessy.net/2016/11/26/learning-to-read-x86-assembly-language</id>
+    <published>2016-11-26T04:00:00Z</published>
+    <updated>2016-11-26T04:00:00Z</updated>
+    <category>ruby</category>
+    <author>
+      <name></name>
+    </author>
+    <summary type="html">&lt;div style="float: right; padding: 0px 0px 30px 30px; text-align: center; line-height:16px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2016/11/26/8086.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;A 16-bit Intel 8086 microprocessor from 1978&lt;br/&gt;
+    &lt;small&gt;(source: &lt;a href="https://commons.wikimedia.org/wiki/File:L_intel-c8086.jpg"&gt;RodolfoNeres via Wikimedia Commons&lt;/a&gt;)&lt;/small&gt;&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Writing assembly language is </summary>
+    <content type="html">&lt;div style="float: right; padding: 0px 0px 30px 30px; text-align: center; line-height:16px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2016/11/26/8086.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;A 16-bit Intel 8086 microprocessor from 1978&lt;br/&gt;
+    &lt;small&gt;(source: &lt;a href="https://commons.wikimedia.org/wiki/File:L_intel-c8086.jpg"&gt;RodolfoNeres via Wikimedia Commons&lt;/a&gt;)&lt;/small&gt;&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;Writing assembly language is something best left for the experts. To write code
+that runs directly on your microprocessor you need to know how memory
+segmentation works, what the intended use of each register is, how codes
+executes in real and protected modes and much, much more. And, of course,
+modern compilers will usually produce faster, more optimized code than you ever
+could, without making any mistakes.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Reading&lt;/em&gt; assembly language, on the other hand, isn’t nearly as difficult and can
+be a useful skill to have: Someday you might need to debug code without having
+the original source. You’ll begin to understand what a microprocessor can and
+can’t do by reading it’s language directly. And you’ll appreciate and
+understand your favorite programming language even more after seeing your own
+code translated into low level machine instructions.&lt;/p&gt;
+
+&lt;p&gt;But most importantly, learning about assembly language can be a lot of fun.&lt;/p&gt;
+
+&lt;h2&gt;Usually Reading Assembly Language Is No Fun At All&lt;/h2&gt;
+
+&lt;p&gt;Unfortunately, most of us only see assembly language after something has gone
+wrong, terribly wrong, when we encounter something like this:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/segfault.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;This is what a segmentation fault looks like in a debugger. The debugger shows
+me assembly language because it doesn’t know what else to show me. A
+“segmentation fault” means one of the assembly language instructions, for
+example the &lt;span class="code"&gt;movb $0x6c, 0x1(%rax)&lt;/span&gt; line above, has
+tried to write to a portion of memory which it is not allowed to.&lt;/p&gt;
+
+&lt;p&gt;It’s no wonder that most of us dislike reading low level code like this. We
+only ever see it when we’re in the midst of debugging something, when the
+language and tools we normally rely on have let us down. We never see assembly
+language under happier circumstances; it is always the bearer of bad news.&lt;/p&gt;
+
+&lt;h2&gt;Converting My Own Code to Assembly Language&lt;/h2&gt;
+
+&lt;p&gt;This week I had some free time and decided to read some assembly language just
+for fun. I wanted to read low level code that was working properly, not code
+that was overwriting some other process&amp;rsquo;s memory. I wanted to see if I could
+understand it like any other programming language. To make things easier, I
+decided to translate some of my own code into assembly language so I could
+focus on the assembly language syntax. It was easier to figure out what the
+instructions meant because I knew what they were doing.&lt;/p&gt;
+
+&lt;p&gt;I’m a Ruby developer, and so I was interested in knowing how my Ruby code would
+look translated into assembly language. Unfortunately, the Ruby interpreter (at
+least the standard “MRI” version of Ruby) never does this. Instead, the Ruby
+interpreter itself is compiled into machine language and runs my code using a
+virtual machine. But I wanted to see what a real machine would do, not a
+virtual one.&lt;/p&gt;
+
+&lt;p&gt;Instead I decided to use &lt;a href="https://crystal-lang.org"&gt;Crystal&lt;/a&gt;, a variation on
+Ruby that uses &lt;a href="http://llvm.org"&gt;LLVM&lt;/a&gt; to compile Ruby to native machine
+language before running it. And because the LLVM system can also produce an
+assembly language version of the code it produces, using Crystal was the
+perfect way for me to see my Ruby code translated so a microprocessor could
+understand it.&lt;/p&gt;
+
+&lt;p&gt;I started by writing an extremely simple program that adds 42 to a given
+integer:&lt;/p&gt;
+
+&lt;div class="CodeRay"&gt;
+  &lt;div class="code"&gt;&lt;pre&gt;
+&lt;span class="keyword"&gt;def&lt;/span&gt; &lt;span class="function"&gt;add_forty_two&lt;/span&gt;(n)
+  n+&lt;span class="integer"&gt;42&lt;/span&gt;  
+&lt;span class="keyword"&gt;end&lt;/span&gt;
+
+puts add_forty_two(&lt;span class="integer"&gt;10&lt;/span&gt;)
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;p&gt;This was both Ruby code:&lt;/p&gt;
+
+&lt;pre&gt;
+$ ruby add_forty_two.rb 
+52
+&lt;/pre&gt;
+
+
+&lt;p&gt;And Crystal code:&lt;/p&gt;
+
+&lt;pre&gt;
+$ crystal add_forty_two.rb
+52
+&lt;/pre&gt;
+
+
+&lt;p&gt;Both produced the same result, of course. But only Crystal could produce a copy
+in assembly language: &lt;/p&gt;
+
+&lt;pre&gt;
+$ crystal build add_forty_two.rb --emit asm
+&lt;/pre&gt;
+
+
+&lt;p&gt;This created a file called add_forty_two.s which contained 10,000s of lines of
+assembly language code. (Most of this was the compiled version of the Crystal
+runtime library.) I opened add_forty_two.s in a text editor and searched for
+“add_forty_two,” the name of my function. First I found the call site, the code
+that calls my add_forty_two function:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/call-site.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;I’ll return to this a bit later. Searching again I found the x86 assembly
+language version of my function:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Next, I deleted all of the assembler directives, such as &lt;span
+class="code"&gt;.globl&lt;/span&gt; and &lt;span class="code"&gt;.cfi_offset.&lt;/span&gt; Someday
+it would be interesting to learn about these, but I wanted to focus on the
+actual machine instructions. And finally I pasted the the remaining code inside
+of my Ruby function.&lt;/p&gt;
+
+&lt;p&gt;Then I saw what my computer actually does when it executes &lt;span
+class="code"&gt;add_forty_two&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code2.png"/&gt;&lt;/p&gt;
+
+&lt;h2&gt;x86 Assembly Language: Almost Easy to Read&lt;/h2&gt;
+
+&lt;p&gt;This code is &lt;em&gt;almost&lt;/em&gt; easy to follow. I can guess what each instruction means:
+push, add, move, etc., but I can’t quite follow what’s going on here. &lt;span
+class="code"&gt;mov&lt;/span&gt; probably means to move, but what is the computer
+moving? And from where to where?&lt;/p&gt;
+
+&lt;div style="float: right; padding: 20px 0px 0px 30px; text-align: center; line-height:16px"&gt;
+  &lt;img src="http://patshaughnessy.net/assets/2016/11/26/budapest.jpg"&gt;&lt;br/&gt;
+  &lt;i&gt;Was x86 assembly language designed in Hungary?&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;The problem is that x86 assembly language was designed by Hungarians. I don’t
+mean that literally; in fact, I have no idea who designed x86 assembly
+language. I mean that x86 code reminds me of the Hungarian language.&lt;/p&gt;
+
+&lt;p&gt;I lived in Budapest for about a year in 1992 and managed to become
+conversational in Hungarian, although I’ve forgotten all of it since. A
+beautiful language, Hungarian is notoriously difficult for foreigners to learn.
+Related only to Finnish and Estonian, its grammar doesn’t resemble Italian,
+French or other romance languages; nor does it resemble Russian or any of the
+other Slavic languages from Eastern Europe.&lt;/p&gt;
+
+&lt;p&gt;The one bit of Hungarian grammar I still remember is that instead of using
+separate words for prepositions, such as inside, outside, etc., you append
+different suffixes to the target word. For example “inside the house” would be
+&lt;em&gt;a házban&lt;/em&gt;. House is &lt;em&gt;ház&lt;/em&gt; while inside is &lt;em&gt;ban&lt;/em&gt;. Similarly “in Budapest” would
+be &lt;em&gt;Budapesten&lt;/em&gt; &amp;ndash; the &lt;em&gt;en&lt;/em&gt; suffix means “in.” x86 assembly language code
+reminds me of Hungarian. You don’t use &lt;span class="code"&gt;mov&lt;/span&gt; to move
+something; you use &lt;span class="code"&gt;movq&lt;/span&gt;. You don’t &lt;span
+class="code"&gt;add&lt;/span&gt; something; you use the &lt;span class="code"&gt;addl&lt;/span&gt;
+instruction.&lt;/p&gt;
+
+&lt;p&gt;It turns out x86 assembly is much simpler than Hungarian; there are only a few
+simple suffixes that refer to the size of the data you are operating on. Here
+are two examples:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/addl1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;The &lt;span class="code"&gt;addl&lt;/span&gt; instruction really means “add long,” where
+“long” refers to a 4 byte or 32 bit value. In Crystal, it corresponds to the
+&lt;span class="code"&gt;Int32&lt;/span&gt; type, which is the default integer type and the
+type my &lt;span class="code"&gt;add_forty_two&lt;/span&gt; method uses.&lt;/p&gt;
+
+&lt;p&gt;Here’s another example:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/movq1.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;The letter &lt;em&gt;q&lt;/em&gt; refers to a “quad” word, or an 8 byte or 64 bit value. Most x86
+code these days works with 64 bit or 32 bit values, so you’ll most often see
+instructions that end with &lt;em&gt;q&lt;/em&gt; or &lt;em&gt;l&lt;/em&gt;. Other suffixes are &lt;em&gt;w&lt;/em&gt; for word (16 bits
+or 2 bytes) or &lt;em&gt;b&lt;/em&gt; for 1 byte or 8 bits.&lt;/p&gt;
+
+&lt;h2&gt;x86 Registers&lt;/h2&gt;
+
+&lt;p&gt;But what about all of the operands of the instructions? Why do they all have a
+&amp;ldquo;%&amp;rdquo; prefix, such as &lt;span class="code"&gt;%rsp&lt;/span&gt; or &lt;span
+class="code"&gt;%edi&lt;/span&gt;? Reading x86 assembly language also reminds me of
+reading Perl code. Lots of punctuation symbols for no apparent reason.  Similar
+to Perl, x86 assembly language uses &lt;em&gt;sigils&lt;/em&gt; or magical punctuation characters
+to indicate the type of each operand value.&lt;/p&gt;
+
+&lt;p&gt;Here are my two example instructions again:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/addl2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Here the &amp;ldquo;$&amp;rdquo; symbol means the 42 is a literal or “immediate” value. As you
+might guess, this is the line of code that adds 42 to something. But what does
+it add it to? From the &amp;ldquo;%&amp;rdquo; character we can see the x86 code is adding 42 to
+the &lt;span class="code"&gt;edi&lt;/span&gt; register.&lt;/p&gt;
+
+&lt;p&gt;And what is a register? In a nutshell, the microprocessor inside your computer
+uses registers to hold values while your code is running. So the instruction
+above adds 42 to whatever value is contained in the &lt;span
+class="code"&gt;edi&lt;/span&gt; register, and saves it back into &lt;span
+class="code"&gt;edi&lt;/span&gt;.&lt;/p&gt;
+
+&lt;p&gt;Here’s the second example again:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/movq2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;This instruction, &lt;span class="code"&gt;movq&lt;/span&gt;, refers to two registers:
+&lt;span class="code"&gt;rsp&lt;/span&gt; and &lt;span class="code"&gt;rbp&lt;/span&gt;. As you can
+guess, it moves whatever value is found in the &lt;span class="code"&gt;rsp&lt;/span&gt;
+register to the &lt;span class="code"&gt;rbp&lt;/span&gt; register.&lt;/p&gt;
+
+&lt;p&gt;How many registers are there? What are they called? Let’s look at them using
+LLDB:&lt;/p&gt;
+
+&lt;pre&gt;
+(lldb) register read
+General Purpose Registers:
+       rax = 0x0000000100300268
+       rbx = 0x0000000000000000
+       rcx = 0x00007fffd8132201  libsystem_kernel.dylib`__shmsys + 9
+       rdx = 0x0000000000000000
+       rdi = 0x000000000000000a
+       rsi = 0x00007fff5fbff898
+       rbp = 0x00007fff5fbffa30
+       rsp = 0x00007fff5fbff908
+        r8 = 0x0000000100014b60  add`sigfault_handler
+        r9 = 0x0000000100400000
+       r10 = 0x0000000000000000
+       r11 = 0x0000000000000206
+       r12 = 0x0000000000000000
+       r13 = 0x0000000000000000
+       r14 = 0x0000000000000000
+       r15 = 0x0000000000000000
+       rip = 0x0000000100013cd0  add`*add_forty_two&lt;Int32&gt;:Int32
+    rflags = 0x0000000000000202
+        cs = 0x000000000000002b
+        fs = 0x0000000000000000
+        gs = 0x0000000000000000
+&lt;/pre&gt;
+
+
+&lt;p&gt;You can see there are over 20 registers inside my Mac’s Intel CPU, each
+containing a 64 bit or 8 byte value. LLDB shows the values in hexadecimal. I
+don’t have time today to explain what all of these registers are used for, but
+here are a few highlights:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;&lt;span class="code"&gt;rax&lt;/span&gt;, &lt;span class="code"&gt;rbx&lt;/span&gt;, &lt;span
+class="code"&gt;rcx&lt;/span&gt; and &lt;span class="code"&gt;rdx&lt;/span&gt; are general purpose
+registers used to hold on to intermediate values loaded from memory or used
+during a calculation of some kind.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;span class="code"&gt;rsp&lt;/span&gt; is the stack pointer, which holds the memory
+location of the top of the stack.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;span class="code"&gt;rbp&lt;/span&gt; is the base pointer, which holds the memory
+location of the base of the current stack frame&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;span class="code"&gt;rip&lt;/span&gt; is the instruction pointer, which holds the
+memory location of the next instruction to execute&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;and &lt;span class="code"&gt;rflags&lt;/span&gt; holds a series of flags, used by
+comparison instructions for example.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;In fact, there are many more registers in a modern x86 microprocessor; LLDB is
+only showing me the most commonly used registers. For a complete explanation,
+the definitive guide to all of this is the &lt;a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html"&gt;Intel Software Developer’s
+Manual&lt;/a&gt;.
+Fortunately, my function’s assembly language code only uses a few registers. I
+don’t need to understand them all.&lt;/p&gt;
+
+&lt;div style="padding: 30px 0px 30px 0px; text-align: center; line-height:16px"&gt;
+&lt;img src="http://patshaughnessy.net/assets/2016/11/26/registers.svg"/&gt;
+&lt;i&gt;Registers available in the x86 instruction set&lt;br/&gt;
+    &lt;small&gt;(source: &lt;a href="https://commons.wikimedia.org/wiki/File:Table_of_x86_Registers_svg.svg"&gt;Immae via Wikimedia Commons&lt;/a&gt;)&lt;/small&gt;&lt;/i&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;But wait a minute. Why does my &lt;span class="code"&gt;addl&lt;/span&gt; instruction refer
+to the &lt;span class="code"&gt;edi&lt;/span&gt; register? This isn’t in the list of
+registers shown by LLDB. Where does this add operation occur? What register
+does it use?&lt;/p&gt;
+
+&lt;p&gt;It’s those Hungarian designers again. It turns out that x86 assembly language
+also decorates the register names to indicate their sizes, similar to what we
+saw above with the instruction name suffixes. But for register names x86 syntax
+uses prefixes, not suffixes. (In C programming &lt;em&gt;Hungarian notation&lt;/em&gt; actually
+refers to the practice of using prefixes on variable names to indicate their
+type.)&lt;/p&gt;
+
+&lt;p&gt;What? This is a crazy! Why would any programming language use prefixes to
+indicate data size in one place, but then use suffixes to indicate the same
+thing somewhere else?  To understand this, you have to remember that assembly
+language syntax wasn’t developed overnight. Instead, it gradually evolved of
+the course of many years. Originally, the registers used simple two letter
+names: &lt;span class="code"&gt;ax&lt;/span&gt;, &lt;span class="code"&gt;bx&lt;/span&gt;, &lt;span
+class="code"&gt;cx&lt;/span&gt;.  &lt;span class="code"&gt;dx&lt;/span&gt;, &lt;span
+class="code"&gt;sp&lt;/span&gt; and &lt;span class="code"&gt;ip&lt;/span&gt;. These were the
+registers on the original 8086 16-bit microprocessor from the 1970s. Later in
+the 1980s when Intel built 32 bit microprocessors, starting with the 80386,
+they renamed (or &lt;em&gt;extended&lt;/em&gt;) the &lt;span class="code"&gt;ax&lt;/span&gt;, &lt;span
+class="code"&gt;bx&lt;/span&gt;, &lt;span class="code"&gt;cx&lt;/span&gt;, etc., registers to become
+&lt;span class="code"&gt;eax&lt;/span&gt;, &lt;span class="code"&gt;ebx&lt;/span&gt;, &lt;span
+class="code"&gt;ecx&lt;/span&gt;, etc. These were later renamed again to &lt;span
+class="code"&gt;rax&lt;/span&gt;, &lt;span class="code"&gt;rbx&lt;/span&gt; etc. for 64-bit
+processors.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/register.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;As you can see here, even today x86 assembly code can refer to the same
+register using many different names, for example &lt;span class="code"&gt;al&lt;/span&gt;
+or &lt;span class="code"&gt;ah&lt;/span&gt; for 8-bits, &lt;span class="code"&gt;ax&lt;/span&gt; bit 16
+bits, &lt;span class="code"&gt;eax&lt;/span&gt; for 32 bits and &lt;span
+class="code"&gt;rax&lt;/span&gt; for 64 bits.&lt;/p&gt;
+
+&lt;h2&gt;x86 Assembly Language: Reads Left to Right, Except When It Reads Right to Left&lt;/h2&gt;
+
+&lt;p&gt;Returning to the move instruction from above, how do we know which way the move
+happens?&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/movq2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;That is, does this instruction move data from &lt;span class="code"&gt;rsp&lt;/span&gt; to
+&lt;span class="code"&gt;rbp&lt;/span&gt;? Or from &lt;span class="code"&gt;rbp&lt;/span&gt; to &lt;span
+class="code"&gt;rsp&lt;/span&gt;?  Does it read left to right, or right to left?&lt;/p&gt;
+
+&lt;p&gt;It could be either! It turns out there are two versions of x86
+syntax: &amp;ldquo;AT&amp;amp;T or GNU Assembler (GAS)&amp;rdquo; syntax, which I’ve been using until now,
+and also &amp;ldquo;Intel&amp;rdquo; syntax. GAS reads left to right:&lt;/p&gt;
+
+&lt;div style="padding: 30px 0px 30px 0px; line-height:16px; width: 300px"&gt;
+&lt;img src="http://patshaughnessy.net/assets/2016/11/26/movq3.png"/&gt;&lt;br/&gt;
+&lt;center&gt;&lt;i&gt;AT&amp;T/GAS syntax&lt;/i&gt;&lt;/center&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;But equally valid and common is the Intel syntax, which reads right to left:&lt;/p&gt;
+
+&lt;div style="padding: 30px 0px 30px 0px; line-height:16p; width: 300px"&gt;
+&lt;img src="http://patshaughnessy.net/assets/2016/11/26/movq4.png"/&gt;&lt;br/&gt;
+&lt;center&gt;&lt;i&gt;Intel syntax&lt;/i&gt;&lt;/center&gt;
+&lt;/div&gt;
+
+
+&lt;p&gt;If you see Perl-like sigils (&lt;span class="code"&gt;%rsp&lt;/span&gt; and &lt;span
+class="code"&gt;%rbp&lt;/span&gt; for example) then you’re reading GAS syntax and values
+will move from left to right. If you don’t see any &amp;ldquo;%&amp;rdquo; or &amp;ldquo;$&amp;rdquo; signs, then you
+have Intel syntax and values move right to left. Also notice the Intel syntax
+doesn’t append “q” or “l” on to the instruction names. &lt;a href="http://www.imada.sdu.dk/Courses/DM18/Litteratur/IntelnATT.htm"&gt;This
+article&lt;/a&gt; does a
+great job explaining the differences between the two styles.&lt;/p&gt;
+
+&lt;p&gt;What a train wreck! It’s hard to imagine a more confusing state of affairs. But
+again, remember all of this has evolved over the course of 40 years. It wasn’t
+designed by any single person at any one time. There’s a tremendous amount of
+history behind each x86 assembly language instruction.&lt;/p&gt;
+
+&lt;h2&gt;Executing My Simple Program&lt;/h2&gt;
+
+&lt;p&gt;Now that I understand the basics of x86 assembly language syntax, I’m ready to
+return to my &lt;span class="code"&gt;add_forty_two&lt;/span&gt; code and to try to
+understand how it works. Here it is again:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code2.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Reading the 6 instructions inside of &lt;span class="code"&gt;add_forty_two&lt;/span&gt;,
+there are three different operations going on. First, we setup a new stack
+frame for our function:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code3.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;The stack frame is an area of memory that my code can use to save local
+variable and other information. I won’t spend time on this today because my
+code is so simple it doesn’t use any local variables. The last two instructions
+clean up this stack frame and return to the calling code:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code4.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;I won’t cover this today either. In my next article, I’ll go through a slightly
+more complicated example containing local variables and explain how x86
+assembly code accesses them on the stack.&lt;/p&gt;
+
+&lt;p&gt;For today, I want to focus on the two instructions in the middle which actually
+implement &lt;span class="code"&gt;add_forty_two&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code5.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;We’re down to two assembly language instructions, but it’s still far from
+obvious what this code means! The key to understanding these two instructions
+is to realize that the argument to my function, &lt;span class="code"&gt;n&lt;/span&gt;, is
+passed in using a register:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code6.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;We can see this is true by returning to the call site in the &lt;span
+class="code"&gt;add_forty_two.s&lt;/span&gt; file, to the code which calls my function:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/call-site.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Note how the first &lt;span class="code"&gt;movl&lt;/span&gt; instruction copies the value
+10 into the &lt;span class="code"&gt;edi&lt;/span&gt; register (the lower 32 bits of the
+&lt;span class="code"&gt;rdi&lt;/span&gt; register):&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code7.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Next the &lt;span class="code"&gt;callq&lt;/span&gt; instruction calls my function with 10
+in &lt;span class="code"&gt;edi&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code8.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;So when the &lt;span class="code"&gt;addl&lt;/span&gt; instruction runs, it will add 42 to
+the argument 10.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code9.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Next, the &lt;span class="code"&gt;movl&lt;/span&gt; instruction runs and copies the result
+52 from &lt;span class="code"&gt;edi&lt;/span&gt; to &lt;span class="code"&gt;eax&lt;/span&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code10.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;This, in turn, becomes the return value from my function:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/code11.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;Again, we can see this is the case by reading the call site code again:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src="http://patshaughnessy.net/assets/2016/11/26/call-site.png"/&gt;&lt;/p&gt;
+
+&lt;p&gt;What happens after &lt;span class="code"&gt;add_forty_two&lt;/span&gt; returns? It moves
+&lt;span class="code"&gt;%eax&lt;/span&gt;, the return value, to &lt;span
+class="code"&gt;%edi&lt;/span&gt; where it becomes the argument to a second function
+call, the call to &lt;span class="code"&gt;puts&lt;/span&gt;.&lt;/p&gt;
+
+&lt;p&gt;I’m not sure whether this pattern of using the &lt;span class="code"&gt;%edi&lt;/span&gt;
+and &lt;span class="code"&gt;%eax&lt;/span&gt; registers to hold the function arguments and
+return values is a x86 standard convention. My guess is that instead it’s a
+pattern the LLVM code generator uses. It may be that LLVM only uses this
+technique for a single argument and single return value function like &lt;span
+class="code"&gt;add_forty_two&lt;/span&gt;.&lt;/p&gt;
+
+&lt;h2&gt;Next Time&lt;/h2&gt;
+
+&lt;p&gt;I haven’t done much, but already I’m beginning to understand x86 assembly
+language. Almost unintelligible when I first saw it, now I can start to follow
+what the machine instructions do when my code is executed. The key was learning
+how the instruction and register names change depending on the size of the
+value they operate on.&lt;/p&gt;
+
+&lt;p&gt;There’s much more to learn, of course. In my next article I’ll take a look at
+how an x86 microprocessor uses the stack to save values, and how this maps to
+Ruby using a slightly more complex example. Along the way I’ll learn about a
+few more important syntax rules of x86 assembly language.&lt;/p&gt;
+</content>
+  </entry>
+</feed>

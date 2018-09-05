@@ -3,7 +3,7 @@ class HomePage
   attr_reader :posts
 
   def initialize(posts)
-    @posts = posts.reverse
+    @posts = posts
   end
 
   def urls
@@ -20,6 +20,10 @@ class HomePage
 
   def month_strings
     @month_strings ||= months_with_empty_duplicates
+  end
+
+  def tag
+    nil
   end
 
   private
